@@ -1,0 +1,16 @@
+{
+	"ImportPath": "github.com/smashwilson/rhocloud/frontdoor",
+	"GoVersion": "go1.4",
+	"Deps": [
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.6.2-5-g7096056",
+			"Rev": "7096056d3cab4d7d11436441f5fc2935cb1cf58c"
+		},
+		{
+			"ImportPath": "github.com/kelseyhightower/envconfig",
+			"Comment": "v1.0.0-6-ge904934",
+			"Rev": "e9049346b6aae8e6ad500c5a4519ad029439d660"
+		}
+	]
+}
