@@ -10,6 +10,8 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	os.Setenv("RHO_PORT", "1234")
 	os.Setenv("RHO_LOGLEVEL", "debug")
+	os.Setenv("RHO_ADMINNAME", "fake")
+	os.Setenv("RHO_ADMINKEY", "12345")
 
 	if err := c.Load(); err != nil {
 		t.Errorf("Error loading configuration: %v", err)
@@ -22,6 +24,14 @@ func TestLoadFromEnvironment(t *testing.T) {
 	if c.Settings.LogLevel != "debug" {
 		t.Errorf("Unexpected log level: %s", c.Settings.LogLevel)
 	}
+
+	if c.Settings.AdminName != "fake" {
+		t.Errorf("Unexpected administrator name: %s", c.Settings.AdminName)
+	}
+
+	if c.Settings.AdminKey != "12345" {
+		t.Errorf("Unexpected administrator API key: %s", c.Settings.AdminKey)
+	}
 }
 
 func TestDefaultValues(t *testing.T) {
@@ -29,6 +39,8 @@ func TestDefaultValues(t *testing.T) {
 
 	os.Setenv("RHO_PORT", "")
 	os.Setenv("RHO_LOGLEVEL", "")
+	os.Setenv("RHO_ADMINNAME", "")
+	os.Setenv("RHO_ADMINKEY", "")
 
 	if err := c.Load(); err != nil {
 		t.Errorf("Error loading configuration: %v", err)

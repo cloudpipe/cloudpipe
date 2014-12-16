@@ -14,8 +14,10 @@ type Context struct {
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
-	Port     int
-	LogLevel string
+	Port      int
+	LogLevel  string
+	AdminName string
+	AdminKey  string
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
