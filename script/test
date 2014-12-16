@@ -7,7 +7,7 @@ fig build
 
 echo ">> frontdoor tests"
 
-fig run frontdoor go test -v github.com/smashwilson/rhocloud/frontdoor/...
+fig run frontdoor go test github.com/smashwilson/rhocloud/frontdoor/...
 STATUS=$?
 
 if [ "${STATUS}" != "0" ]; then
