@@ -1,0 +1,15 @@
+#!/bin/bash
+
+ROOT=$(basedir $0)/..
+cd ${ROOT}
+
+echo ">> frontdoor tests"
+
+fig run frontdoor go test -v github.com/smashwilson/rhocloud/frontdoor/...
+STATUS=$?
+
+if [ "${STATUS}" != "0" ]; then
+  echo "!! frontdoor tests are failing"
+else
+  echo "<< frontdoor tests passed"
+fi
