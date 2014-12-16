@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
 )
@@ -14,6 +16,29 @@ type Context struct {
 type Settings struct {
 	Port     int
 	LogLevel string
+}
+
+// NewContext loads the active configuration and applies any immediate, global settings like the
+// logging level.
+func NewContext() (*Context, error) {
+	c := &Context{}
+
+	if err := c.Load(); err != nil {
+		return c, err
+	}
+
+	level, err := log.ParseLevel(c.Settings.LogLevel)
+	if err != nil {
+		return c, err
+	}
+	log.SetLevel(level)
+
+	log.WithFields(log.Fields{
+		"port":          c.Settings.Port,
+		"logging level": c.Settings.LogLevel,
+	}).Info("Initializing with loaded settings.")
+
+	return c, nil
 }
 
 // Load configuration settings from the environment, apply defaults, and validate them.
@@ -35,4 +60,9 @@ func (c *Context) Load() error {
 	}
 
 	return nil
+}
+
+// ListenAddr generates an address to bind the net/http server to based on the current settings.
+func (c *Context) ListenAddr() string {
+	return fmt.Sprintf(":%d", c.Settings.Port)
 }

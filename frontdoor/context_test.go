@@ -43,6 +43,16 @@ func TestDefaultValues(t *testing.T) {
 	}
 }
 
+func TestAddressString(t *testing.T) {
+	c := Context{
+		Settings: Settings{Port: 1234},
+	}
+
+	if c.ListenAddr() != ":1234" {
+		t.Errorf("Unexpected listen address: %s", c.ListenAddr())
+	}
+}
+
 func TestValidateLogLevel(t *testing.T) {
 	c := Context{}
 
