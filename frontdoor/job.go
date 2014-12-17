@@ -2,7 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // JobLayer associates a Layer with a Job.
@@ -18,16 +22,10 @@ type JobVolume struct {
 // ResultSource describes a mechanism for providing a Job's result back to the client. This can be
 // either the singleton constant StdoutResult or a FileResult with a path.
 type ResultSource interface {
-	json.Marshaler
-
 	IsResultSource()
 }
 
 type stdoutResult struct{}
-
-func (r stdoutResult) MarshalJSON() ([]byte, error) {
-	return []byte(`"stdout"`), nil
-}
 
 func (r stdoutResult) IsResultSource() {}
 
@@ -41,9 +39,8 @@ type FileResult struct {
 	Path string
 }
 
-// MarshalJSON converts a FileResult into its JSON representation as the string "file:<path>".
-func (r FileResult) MarshalJSON() ([]byte, error) {
-	return json.Marshal("file:" + r.Path)
+func (r FileResult) String() string {
+	return "file:" + r.Path
 }
 
 // IsResultSource is a marker method for the ResultSource interface.
@@ -132,12 +129,12 @@ type Job struct {
 	Layers       []JobLayer        `json:"layer"`
 	Volumes      []JobVolume       `json:"vol"`
 	Environment  map[string]string `json:"env"`
-	ResultSource ResultSource      `json:"result_source"`
-	ResultType   ResultType        `json:"result_type"`
+	ResultSource ResultSource      `json:"-"`
+	ResultType   ResultType        `json:"-"`
 	MaxRuntime   int               `json:"max_runtime"`
 	Stdin        []byte            `json:"stdin"`
 
-	Profile   *string `json:"profile,omitempty"`
+	Profile   *bool   `json:"profile,omitempty"`
 	DependsOn *string `json:"depends_on,omitempty"`
 }
 
@@ -163,18 +160,130 @@ type SubmittedJob struct {
 
 // JobHandler dispatches API calls to /job based on request type.
 func JobHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	//
+	switch r.Method {
+	case "GET":
+		JobListHandler(c, w, r)
+	case "POST":
+		JobSubmitHandler(c, w, r)
+	default:
+		RhoError{
+			Code:    "3",
+			Message: "Method not supported",
+			Hint:    "Use GET or POST against this endpoint.",
+			Retry:   false,
+		}.Report(http.StatusMethodNotAllowed, w)
+	}
 }
 
 // JobSubmitHandler enqueues a new job associated with the authenticated account.
 func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	//
+	type RequestJob struct {
+		Job
+
+		RawResultSource string `json:"result_source"`
+		RawResultType   string `json:"result_type"`
+	}
+
+	type Request struct {
+		Jobs []RequestJob `json:"jobs"`
+	}
+
+	type Response struct {
+		JIDs []uint `json:"jids"`
+	}
+
+	account, err := Authenticate(c, w, r)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Authentication failure.")
+		return
+	}
+
+	// body, err := ioutil.ReadAll(r.Body)
+	// log.WithFields(log.Fields{
+	// 	"body": string(body),
+	// }).Info("Request body")
+
+	var req Request
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":   err,
+			"account": account.Name,
+		}).Error("Unable to parse JSON.")
+
+		RhoError{
+			Code:    "5",
+			Message: "Unable to parse job payload as JSON.",
+			Hint:    "Please supply valid JSON in your request.",
+			Retry:   false,
+		}.Report(http.StatusBadRequest, w)
+		return
+	}
+
+	jids := make([]uint, len(req.Jobs))
+	for index, rjob := range req.Jobs {
+		job := rjob.Job
+
+		// Interpret the deferred fields.
+		if rjob.RawResultSource == "stdout" {
+			job.ResultSource = StdoutResult
+		} else if strings.HasPrefix(rjob.RawResultSource, "file:") {
+			path := rjob.RawResultSource[len("file:") : len(rjob.RawResultSource)-1]
+			job.ResultSource = FileResult{Path: path}
+		} else {
+			log.WithFields(log.Fields{
+				"account":       account.Name,
+				"result_source": rjob.RawResultSource,
+			}).Error("Invalid result_source in a submitted job.")
+
+			RhoError{
+				Code:    "6",
+				Message: "Invalid result_source.",
+				Hint:    `"result_source" must be either "stdout" or "file:{path}".`,
+				Retry:   false,
+			}.Report(http.StatusBadRequest, w)
+			return
+		}
+
+		switch rjob.RawResultType {
+		case BinaryResult.name:
+			job.ResultType = BinaryResult
+		case PickleResult.name:
+			job.ResultType = PickleResult
+		default:
+			log.WithFields(log.Fields{
+				"account":     account.Name,
+				"result_type": rjob.RawResultType,
+			}).Error("Invalid result_type in a submitted job.")
+
+			RhoError{
+				Code:    "7",
+				Message: "Invalid result_type.",
+				Hint:    `"result_type" must be either "binary" or "pickle".`,
+				Retry:   false,
+			}.Report(http.StatusBadRequest, w)
+			return
+		}
+
+		jids[index] = uint(index)
+		log.WithFields(log.Fields{
+			"job":     job,
+			"account": account.Name,
+		}).Info("Succesfully submitted a job.")
+	}
+
+	response := Response{JIDs: jids}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 // JobListHandler provides updated details about one or more jobs currently submitted to the
 // cluster.
 func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	//
+	fmt.Fprintf(w, `[]`)
 }
 
 // JobKillHandler allows a user to prematurely terminate a running job.
