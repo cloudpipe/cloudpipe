@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,31 +27,11 @@ func TestAuthenticateMissingCredentials(t *testing.T) {
 		t.Error("Expected Authenticate to return an error without authentication provided.")
 	}
 
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("Wrong HTTP status code: %d", w.Code)
-	}
-
-	if contentType := w.HeaderMap.Get("Content-Type"); contentType != "application/json" {
-		t.Errorf("Incorrect or missing content-type header: [%s]", contentType)
-	}
-
-	var e struct {
-		Error RhoError
-	}
-	body := w.Body.Bytes()
-	if err := json.Unmarshal(body, &e); err != nil {
-		t.Fatalf("Unable to parse response body as JSON: %s", body)
-	}
-
-	if e.Error.Code != "1" {
-		t.Errorf("Unexpected error code: [%s]", e.Error.Code)
-	}
-	if e.Error.Message != "You must authenticate." {
-		t.Errorf("Unexpected error message: [%s]", e.Error.Message)
-	}
-	if e.Error.Retry {
-		t.Errorf("Retry is set to true and should be false.")
-	}
+	hasError(t, w, http.StatusUnauthorized, RhoError{
+		Code:    "1",
+		Message: "You must authenticate.",
+		Retry:   false,
+	})
 }
 
 func TestAuthenticateAdminCredentials(t *testing.T) {
@@ -89,29 +68,9 @@ func TestAuthenticateUnknownAccount(t *testing.T) {
 		t.Error("Expected Authenticate to return an error with unrecognized credentials.")
 	}
 
-	if w.Code != http.StatusUnauthorized {
-		t.Errorf("Wrong HTTP status code: %d", w.Code)
-	}
-
-	if contentType := w.HeaderMap.Get("Content-Type"); contentType != "application/json" {
-		t.Errorf("Incorrect or missing content-type header: [%s]", contentType)
-	}
-
-	var e struct {
-		Error RhoError
-	}
-	body := w.Body.Bytes()
-	if err := json.Unmarshal(body, &e); err != nil {
-		t.Fatalf("Unable to parse response body as JSON: %s", body)
-	}
-
-	if e.Error.Code != "2" {
-		t.Errorf("Unexpected error code: [%s]", e.Error.Code)
-	}
-	if e.Error.Message != "Unable to authenticate." {
-		t.Errorf("Unexpected error message: [%s]", e.Error.Message)
-	}
-	if e.Error.Retry {
-		t.Errorf("Retry is set to true and should be false.")
-	}
+	hasError(t, w, http.StatusUnauthorized, RhoError{
+		Code:    "2",
+		Message: "Unable to authenticate.",
+		Retry:   false,
+	})
 }

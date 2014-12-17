@@ -11,5 +11,6 @@ WORKDIR /go/src/github.com/smashwilson/rhocloud/frontdoor/
 RUN godep restore
 
 ADD . /go/src/github.com/smashwilson/rhocloud/frontdoor/
+RUN go install github.com/smashwilson/rhocloud/frontdoor
 
 CMD ["/go/bin/frontdoor"]
