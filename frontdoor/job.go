@@ -11,12 +11,12 @@ import (
 
 // JobLayer associates a Layer with a Job.
 type JobLayer struct {
-	Name string `json:"name"`
+	Name string `json:"name",bson:"name"`
 }
 
 // JobVolume associates one or more Volumes with a Job.
 type JobVolume struct {
-	Name string `json:"name"`
+	Name string `json:"name",bson:"name"`
 }
 
 // ResultSource describes a mechanism for providing a Job's result back to the client. This can be
@@ -120,42 +120,44 @@ type Collected struct {
 
 // Job is a user-submitted compute task to be executed in an appropriate Docker container.
 type Job struct {
-	Command      string            `json:"cmd"`
-	Name         *string           `json:"name,omitempty"`
-	Core         string            `json:"core"`
-	Multicore    int               `json:"multicore"`
-	Restartable  bool              `json:"restartable"`
-	Tags         map[string]string `json:"tags"`
-	Layers       []JobLayer        `json:"layer"`
-	Volumes      []JobVolume       `json:"vol"`
-	Environment  map[string]string `json:"env"`
-	ResultSource ResultSource      `json:"-"`
-	ResultType   ResultType        `json:"-"`
-	MaxRuntime   int               `json:"max_runtime"`
-	Stdin        []byte            `json:"stdin"`
+	Command      string            `json:"cmd",bson:"cmd"`
+	Name         *string           `json:"name,omitempty",bson:"name,omitempty"`
+	Core         string            `json:"core",bson:"core"`
+	Multicore    int               `json:"multicore",bson:"multicore"`
+	Restartable  bool              `json:"restartable",bson:"restartable"`
+	Tags         map[string]string `json:"tags",bson:"tags"`
+	Layers       []JobLayer        `json:"layer",bson:"layer"`
+	Volumes      []JobVolume       `json:"vol",bson:"vol"`
+	Environment  map[string]string `json:"env",bson:"env"`
+	ResultSource ResultSource      `json:"-",bson:"-"`
+	ResultType   ResultType        `json:"-",bson:"-"`
+	MaxRuntime   int               `json:"max_runtime",bson:"max_runtime"`
+	Stdin        []byte            `json:"stdin",bson:"stdin"`
 
-	Profile   *bool   `json:"profile,omitempty"`
-	DependsOn *string `json:"depends_on,omitempty"`
+	Profile   *bool   `json:"profile,omitempty",bson:"profile,omitempty"`
+	DependsOn *string `json:"depends_on,omitempty",bson:"depends_on,omitempty"`
 }
 
 // SubmittedJob is a Job that has already been submitted.
 type SubmittedJob struct {
 	Job
 
-	CreatedAt  JSONTime `json:"created_at"`
-	StartedAt  JSONTime `json:"started_at,omitempty"`
-	FinishedAt JSONTime `json:"finished_at,omitempty"`
+	CreatedAt  JSONTime `json:"created_at",bson:"created_at"`
+	StartedAt  JSONTime `json:"started_at,omitempty",bson:"started_at"`
+	FinishedAt JSONTime `json:"finished_at,omitempty",bson:"finished_at"`
 
-	Status        JobStatus `json:"status"`
-	Result        string    `json:"result"`
-	ReturnCode    string    `json:"return_code"`
-	Runtime       uint64    `json:"runtime"`
-	QueueDelay    uint64    `json:"queue_delay"`
-	OverheadDelay uint64    `json:"overhead_delay"`
-	Stderr        string    `json:"stderr"`
-	Stdout        string    `json:"stdout"`
+	Status        JobStatus `json:"status",bson:"status"`
+	Result        string    `json:"result",bson:"result"`
+	ReturnCode    string    `json:"return_code",bson:"return_code"`
+	Runtime       uint64    `json:"runtime",bson:"runtime"`
+	QueueDelay    uint64    `json:"queue_delay",bson:"queue_delay"`
+	OverheadDelay uint64    `json:"overhead_delay",bson:"overhead_delay"`
+	Stderr        string    `json:"stderr",bson:"stderr"`
+	Stdout        string    `json:"stdout",bson:"stdout"`
 
-	Collected Collected `json:"collected,omitempty"`
+	Collected Collected `json:"collected,omitempty",bson:"collected,omitempty"`
+
+	Account string `json:"-",bson:"account"`
 }
 
 // JobHandler dispatches API calls to /job based on request type.
