@@ -3,6 +3,9 @@ frontdoor:
   build: frontdoor/
   links:
   - mongo
+  environment:
+    RHO_ADMINNAME: admin
+    RHO_ADMINKEY: 12345
   ports:
   - "8000:8000"
 mongo:
