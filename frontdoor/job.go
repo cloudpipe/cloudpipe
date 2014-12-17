@@ -68,6 +68,59 @@ var (
 	PickleResult = ResultType{name: "pickle"}
 )
 
+// JobStatus describes the current status of a submitted job.
+type JobStatus struct {
+	name      string
+	completed bool
+}
+
+func (s JobStatus) String() string {
+	return s.name
+}
+
+// IsFinished returns true if the current status indicates that the job has completed execution,
+// successfully or otherwise.
+func (s JobStatus) IsFinished() bool {
+	return s.completed
+}
+
+// MarshalJSON encodes a JobStatus as a JSON string.
+func (s JobStatus) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.name)
+}
+
+var (
+	// StatusWaiting indicates that a job has been submitted, but has not yet entered the queue.
+	StatusWaiting = JobStatus{name: "waiting"}
+
+	// StatusQueued indicates that a job has been placed into the execution queue.
+	StatusQueued = JobStatus{name: "queued"}
+
+	// StatusProcessing indicates that the job is running.
+	StatusProcessing = JobStatus{name: "processing"}
+
+	// StatusDone indicates that the job has completed successfully.
+	StatusDone = JobStatus{name: "done"}
+
+	// StatusError indicates that the job threw some kind of exception or otherwise returned a non-zero
+	// exit code.
+	StatusError = JobStatus{name: "error"}
+
+	// StatusKilled indicates that the user requested that the job be terminated.
+	StatusKilled = JobStatus{name: "killed"}
+
+	// StatusStalled indicates that the job has gotten stuck (usually fetching dependencies).
+	StatusStalled = JobStatus{name: "stalled"}
+)
+
+// Collected contains various metrics about the running job.
+type Collected struct {
+	CPUTimeUser     uint64 `json:"cputime_user,omitempty"`
+	CPUTimeSystem   uint64 `json:"cputime_system,omitempty"`
+	MemoryFailCount uint64 `json:"memory_failcnt,omitempty"`
+	MemoryMaxUsage  uint64 `json:"memory_max_usage,omitempty"`
+}
+
 // Job is a user-submitted compute task to be executed in an appropriate Docker container.
 type Job struct {
 	Command      string            `json:"cmd"`
@@ -86,6 +139,26 @@ type Job struct {
 
 	Profile   *string `json:"profile,omitempty"`
 	DependsOn *string `json:"depends_on,omitempty"`
+}
+
+// SubmittedJob is a Job that has already been submitted.
+type SubmittedJob struct {
+	Job
+
+	CreatedAt  JSONTime `json:"created_at"`
+	StartedAt  JSONTime `json:"started_at,omitempty"`
+	FinishedAt JSONTime `json:"finished_at,omitempty"`
+
+	Status        JobStatus `json:"status"`
+	Result        string    `json:"result"`
+	ReturnCode    string    `json:"return_code"`
+	Runtime       uint64    `json:"runtime"`
+	QueueDelay    uint64    `json:"queue_delay"`
+	OverheadDelay uint64    `json:"overhead_delay"`
+	Stderr        string    `json:"stderr"`
+	Stdout        string    `json:"stdout"`
+
+	Collected Collected `json:"collected,omitempty"`
 }
 
 // JobHandler dispatches API calls to /job based on request type.

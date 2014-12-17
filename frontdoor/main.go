@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -64,5 +65,23 @@ func (e RhoError) Report(status int, w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_, err = w.Write(b)
+	return err
+}
+
+// JSONTime is a Time that understands how to marshal and unmarshal itself from JSON strings.
+type JSONTime time.Time
+
+const timeFormat = `"2006-01-02 15:04:05.000"`
+
+// MarshalJSON encodes a JSONTime as a UTC timestamp string.
+func (t *JSONTime) MarshalJSON() ([]byte, error) {
+	stamp := time.Time(*t).UTC().Format(timeFormat)
+	return []byte(stamp), nil
+}
+
+// UnmarshalJSON decodes a UTC timestamp string into a time.
+func (t *JSONTime) UnmarshalJSON(input []byte) error {
+	parsed, err := time.Parse(timeFormat, string(input))
+	*t = JSONTime(parsed)
 	return err
 }
