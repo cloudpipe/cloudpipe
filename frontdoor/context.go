@@ -5,11 +5,13 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
+	mgo "gopkg.in/mgo.v2"
 )
 
 // Context provides shared state among individual route handlers.
 type Context struct {
 	Settings Settings
+	Database *mgo.Database
 }
 
 // Settings contains configuration options loaded from the environment.
@@ -30,11 +32,7 @@ func NewContext() (*Context, error) {
 		return c, err
 	}
 
-	level, err := log.ParseLevel(c.Settings.LogLevel)
-	if err != nil {
-		return c, err
-	}
-	log.SetLevel(level)
+	// Summarize the loaded settings.
 
 	log.WithFields(log.Fields{
 		"port":          c.Settings.Port,
@@ -42,6 +40,22 @@ func NewContext() (*Context, error) {
 		"mongo URL":     c.Settings.MongoURL,
 		"admin account": c.Settings.AdminName,
 	}).Info("Initializing with loaded settings.")
+
+	// Configure the logging level.
+
+	level, err := log.ParseLevel(c.Settings.LogLevel)
+	if err != nil {
+		return c, err
+	}
+	log.SetLevel(level)
+
+	// Connect to MongoDB.
+
+	session, err := mgo.Dial(c.Settings.MongoURL)
+	if err != nil {
+		return c, err
+	}
+	c.Database = session.DB("rho")
 
 	return c, nil
 }
