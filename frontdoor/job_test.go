@@ -18,30 +18,11 @@ func TestJobHandlerBadRequest(t *testing.T) {
 
 	JobHandler(c, w, r)
 
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Errorf("Unexpected HTTP status: [%d]", w.Code)
-	}
-	if contentType := w.HeaderMap.Get("Content-Type"); contentType != "application/json" {
-		t.Errorf("Incorrect or missing content-type header: [%s]", contentType)
-	}
-
-	var e struct {
-		Error RhoError
-	}
-	body := w.Body.Bytes()
-	if err := json.Unmarshal(body, &e); err != nil {
-		t.Fatalf("Unable to parse response body as JSON: %s", body)
-	}
-
-	if e.Error.Code != "3" {
-		t.Errorf("Unexpected error code: [%s]", e.Error.Code)
-	}
-	if e.Error.Message != "Method not supported" {
-		t.Errorf("Unexpected error message: [%s]", e.Error.Message)
-	}
-	if e.Error.Retry {
-		t.Errorf("Retry is set to true and should be false.")
-	}
+	hasError(t, w, http.StatusMethodNotAllowed, RhoError{
+		Code:    "3",
+		Message: "Method not supported",
+		Retry:   false,
+	})
 }
 
 func TestSubmitJob(t *testing.T) {
@@ -115,27 +96,11 @@ func TestSubmitJobBadResultSource(t *testing.T) {
 
 	JobHandler(c, w, r)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected a bad request, got [%d]", w.Code)
-	}
-
-	var e struct {
-		Error RhoError
-	}
-	out := w.Body.Bytes()
-	if err := json.Unmarshal(out, &e); err != nil {
-		t.Fatalf("Unable to parse response body as JSON: [%s]", string(out))
-	}
-
-	if e.Error.Code != "6" {
-		t.Errorf("Unexpected error code: [%s]", e.Error.Code)
-	}
-	if e.Error.Message != "Invalid result_source." {
-		t.Errorf("Unexpected error message: [%s]", e.Error.Message)
-	}
-	if e.Error.Retry {
-		t.Errorf("Retry is set to true and should be false.")
-	}
+	hasError(t, w, http.StatusBadRequest, RhoError{
+		Code:    "6",
+		Message: "Invalid result_source.",
+		Retry:   false,
+	})
 }
 
 func TestSubmitJobBadResultType(t *testing.T) {
@@ -164,25 +129,9 @@ func TestSubmitJobBadResultType(t *testing.T) {
 
 	JobHandler(c, w, r)
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected a bad request, got [%d]", w.Code)
-	}
-
-	var e struct {
-		Error RhoError
-	}
-	out := w.Body.Bytes()
-	if err := json.Unmarshal(out, &e); err != nil {
-		t.Fatalf("Unable to parse response body as JSON: [%s]", string(out))
-	}
-
-	if e.Error.Code != "7" {
-		t.Errorf("Unexpected error code: [%s]", e.Error.Code)
-	}
-	if e.Error.Message != "Invalid result_type." {
-		t.Errorf("Unexpected error message: [%s]", e.Error.Message)
-	}
-	if e.Error.Retry {
-		t.Errorf("Retry is set to true and should be false.")
-	}
+	hasError(t, w, http.StatusBadRequest, RhoError{
+		Code:    "7",
+		Message: "Invalid result_type.",
+		Retry:   false,
+	})
 }
