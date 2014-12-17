@@ -16,6 +16,7 @@ type Context struct {
 type Settings struct {
 	Port      int
 	LogLevel  string
+	MongoURL  string
 	AdminName string
 	AdminKey  string
 }
@@ -38,6 +39,8 @@ func NewContext() (*Context, error) {
 	log.WithFields(log.Fields{
 		"port":          c.Settings.Port,
 		"logging level": c.Settings.LogLevel,
+		"mongo URL":     c.Settings.MongoURL,
+		"admin account": c.Settings.AdminName,
 	}).Info("Initializing with loaded settings.")
 
 	return c, nil
@@ -55,6 +58,10 @@ func (c *Context) Load() error {
 
 	if c.Settings.LogLevel == "" {
 		c.Settings.LogLevel = "info"
+	}
+
+	if c.Settings.MongoURL == "" {
+		c.Settings.MongoURL = "mongo"
 	}
 
 	if _, err := log.ParseLevel(c.Settings.LogLevel); err != nil {
