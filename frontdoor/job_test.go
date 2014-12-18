@@ -13,12 +13,38 @@ type JobStorage struct {
 	NullStorage
 
 	Submitted SubmittedJob
+	Query     JobQuery
 }
 
 func (storage *JobStorage) InsertJob(job SubmittedJob) (uint64, error) {
 	storage.Submitted = job
 
 	return 42, nil
+}
+
+func (storage *JobStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
+	storage.Query = query
+
+	j0 := SubmittedJob{
+		Job: Job{
+			Command: `echo "1"`,
+		},
+		JID: 11,
+	}
+	j1 := SubmittedJob{
+		Job: Job{
+			Command: `echo "2"`,
+		},
+		JID: 22,
+	}
+	j2 := SubmittedJob{
+		Job: Job{
+			Command: `echo "3"`,
+		},
+		JID: 33,
+	}
+
+	return []SubmittedJob{j0, j1, j2}, nil
 }
 
 func TestJobHandlerBadRequest(t *testing.T) {
@@ -166,4 +192,48 @@ func TestSubmitJobBadResultType(t *testing.T) {
 		Message: "Invalid result type [elsewhere]",
 		Retry:   false,
 	})
+}
+
+func TestListJobsAll(t *testing.T) {
+	r, err := http.NewRequest("GET", "https://localhost/api/jobs", nil)
+	if err != nil {
+		t.Fatalf("Unable to create request: %v", err)
+	}
+	r.SetBasicAuth("admin", "12345")
+	w := httptest.NewRecorder()
+	s := &JobStorage{}
+	c := &Context{
+		Settings: Settings{
+			AdminName: "admin",
+			AdminKey:  "12345",
+		},
+		Storage: s,
+	}
+
+	JobHandler(c, w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Unexpected HTTP status: [%d]", w.Code)
+	}
+
+	var response struct {
+		Jobs []SubmittedJob `json:"jobs"`
+	}
+	out := w.Body.Bytes()
+	if err := json.Unmarshal(out, &response); err != nil {
+		t.Fatalf("Unable to parse response body as JSON: [%s]", string(out))
+	}
+
+	if len(response.Jobs) != 3 {
+		t.Fatalf("Unexpected number of jobs returned: [%d]", len(response.Jobs))
+	}
+	if id0 := response.Jobs[0].JID; id0 != 11 {
+		t.Errorf("Expected first job to have jid 11, had [%d]", id0)
+	}
+	if id1 := response.Jobs[1].JID; id1 != 22 {
+		t.Errorf("Expected first job to have jid 22, had [%d]", id1)
+	}
+	if id2 := response.Jobs[2].JID; id2 != 33 {
+		t.Errorf("Expected first job to have jid 33, had [%d]", id2)
+	}
 }
