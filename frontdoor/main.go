@@ -68,6 +68,10 @@ func (e RhoError) Report(status int, w http.ResponseWriter) error {
 	return err
 }
 
+func (e *RhoError) Error() string {
+	return e.Message
+}
+
 // StoredTime is a Time that can be parsed from strings in incoming JSON data, but can also be
 // stored gracefully in BSON.
 type StoredTime int64
