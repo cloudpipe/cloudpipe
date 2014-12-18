@@ -20,95 +20,56 @@ type JobVolume struct {
 	Name string `json:"name",bson:"name"`
 }
 
-// ResultSource describes a mechanism for providing a Job's result back to the client. This can be
-// either the singleton constant StdoutResult or a FileResult with a path.
-type ResultSource interface {
-	IsResultSource()
-}
-
-type stdoutResult struct{}
-
-func (r stdoutResult) IsResultSource() {}
-
-// StdoutResult is a singleton ResultSource that indicates that a Job will return its result to
-// the client over stdout.
-var StdoutResult = stdoutResult{}
-
-// FileResult is a ResultSource that indicates that a Job will return its result to the client by
-// placing it in a file at a certain path within its container.
-type FileResult struct {
-	Path string
-}
-
-func (r FileResult) String() string {
-	return "file:" + r.Path
-}
-
-// IsResultSource is a marker method for the ResultSource interface.
-func (r FileResult) IsResultSource() {}
-
-// ResultType indicates how a Job's output should be interpreted by the client. Must be one of
-// BinaryResult or PickleResult.
-type ResultType struct {
-	name string
-}
-
-func (s ResultType) String() string {
-	return s.name
-}
-
-var (
-	// BinaryResult indicates that the client should not attempt to interpret the result payload, but
+const (
+	// ResultBinary indicates that the client should not attempt to interpret the result payload, but
 	// provide it as raw bytes.
-	BinaryResult = ResultType{name: "binary"}
+	ResultBinary = "binary"
 
-	// PickleResult indicates that the result contains pickled Python objects.
-	PickleResult = ResultType{name: "pickle"}
-)
+	// ResultPickle indicates that the result contains pickled Python objects.
+	ResultPickle = "pickle"
 
-// JobStatus describes the current status of a submitted job.
-type JobStatus struct {
-	name      string
-	completed bool
-}
-
-func (s JobStatus) String() string {
-	return s.name
-}
-
-// IsFinished returns true if the current status indicates that the job has completed execution,
-// successfully or otherwise.
-func (s JobStatus) IsFinished() bool {
-	return s.completed
-}
-
-// MarshalJSON encodes a JobStatus as a JSON string.
-func (s JobStatus) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.name)
-}
-
-var (
 	// StatusWaiting indicates that a job has been submitted, but has not yet entered the queue.
-	StatusWaiting = JobStatus{name: "waiting"}
+	StatusWaiting = "waiting"
 
 	// StatusQueued indicates that a job has been placed into the execution queue.
-	StatusQueued = JobStatus{name: "queued"}
+	StatusQueued = "queued"
 
 	// StatusProcessing indicates that the job is running.
-	StatusProcessing = JobStatus{name: "processing"}
+	StatusProcessing = "processing"
 
 	// StatusDone indicates that the job has completed successfully.
-	StatusDone = JobStatus{name: "done"}
+	StatusDone = "done"
 
 	// StatusError indicates that the job threw some kind of exception or otherwise returned a non-zero
 	// exit code.
-	StatusError = JobStatus{name: "error"}
+	StatusError = "error"
 
 	// StatusKilled indicates that the user requested that the job be terminated.
-	StatusKilled = JobStatus{name: "killed"}
+	StatusKilled = "killed"
 
 	// StatusStalled indicates that the job has gotten stuck (usually fetching dependencies).
-	StatusStalled = JobStatus{name: "stalled"}
+	StatusStalled = "stalled"
+)
+
+var (
+	validResultType = map[string]bool{ResultBinary: true, ResultPickle: true}
+
+	validStatus = map[string]bool{
+		StatusWaiting:    true,
+		StatusQueued:     true,
+		StatusProcessing: true,
+		StatusDone:       true,
+		StatusError:      true,
+		StatusKilled:     true,
+		StatusStalled:    true,
+	}
+
+	completedStatus = map[string]bool{
+		StatusDone:    true,
+		StatusError:   true,
+		StatusKilled:  true,
+		StatusStalled: true,
+	}
 )
 
 // Collected contains various metrics about the running job.
@@ -130,8 +91,8 @@ type Job struct {
 	Layers       []JobLayer        `json:"layer",bson:"layer"`
 	Volumes      []JobVolume       `json:"vol",bson:"vol"`
 	Environment  map[string]string `json:"env",bson:"env"`
-	ResultSource ResultSource      `json:"-",bson:"-"`
-	ResultType   ResultType        `json:"-",bson:"-"`
+	ResultSource string            `json:"result_source",bson:"result_source"`
+	ResultType   string            `json:"result_type",bson:"result_type"`
 	MaxRuntime   int               `json:"max_runtime",bson:"max_runtime"`
 	Stdin        []byte            `json:"stdin",bson:"stdin"`
 
@@ -139,22 +100,60 @@ type Job struct {
 	DependsOn *string `json:"depends_on,omitempty",bson:"depends_on,omitempty"`
 }
 
+// Validate ensures that all required fields have non-zero values, and that enum-like fields have
+// acceptable values.
+func (j Job) Validate() *RhoError {
+	// Command is required.
+	if j.Command == "" {
+		return &RhoError{
+			Code:    CodeMissingCommand,
+			Message: "All jobs must specify a command to execute.",
+			Hint:    `Specify a command to execute as a "cmd" element in your job.`,
+		}
+	}
+
+	// ResultSource
+	if j.ResultSource != "stdout" && !strings.HasPrefix(j.ResultSource, "file:") {
+		return &RhoError{
+			Code:    CodeInvalidResultSource,
+			Message: fmt.Sprintf("Invalid result source [%s]", j.ResultSource),
+			Hint:    `The "result_source" must be either "stdout" or "file:{path}".`,
+		}
+	}
+
+	// ResultType
+	if _, ok := validResultType[j.ResultType]; ok {
+		accepted := make([]string, 0, len(validResultType))
+		for tp := range validResultType {
+			accepted = append(accepted, tp)
+		}
+
+		return &RhoError{
+			Code:    CodeInvalidResultType,
+			Message: fmt.Sprintf("Invalid result type [%s]", j.ResultType),
+			Hint:    fmt.Sprintf(`The "result_type" must be one of the following: %s`, strings.Join(accepted, ", ")),
+		}
+	}
+
+	return nil
+}
+
 // SubmittedJob is a Job that has already been submitted.
 type SubmittedJob struct {
 	Job
 
-	CreatedAt  JSONTime `json:"created_at",bson:"created_at"`
-	StartedAt  JSONTime `json:"started_at,omitempty",bson:"started_at"`
-	FinishedAt JSONTime `json:"finished_at,omitempty",bson:"finished_at"`
+	CreatedAt  StoredTime `json:"created_at",bson:"created_at"`
+	StartedAt  StoredTime `json:"started_at,omitempty",bson:"started_at"`
+	FinishedAt StoredTime `json:"finished_at,omitempty",bson:"finished_at"`
 
-	Status        JobStatus `json:"status",bson:"status"`
-	Result        string    `json:"result",bson:"result"`
-	ReturnCode    string    `json:"return_code",bson:"return_code"`
-	Runtime       uint64    `json:"runtime",bson:"runtime"`
-	QueueDelay    uint64    `json:"queue_delay",bson:"queue_delay"`
-	OverheadDelay uint64    `json:"overhead_delay",bson:"overhead_delay"`
-	Stderr        string    `json:"stderr",bson:"stderr"`
-	Stdout        string    `json:"stdout",bson:"stdout"`
+	Status        string `json:"status",bson:"status"`
+	Result        string `json:"result",bson:"result"`
+	ReturnCode    string `json:"return_code",bson:"return_code"`
+	Runtime       uint64 `json:"runtime",bson:"runtime"`
+	QueueDelay    uint64 `json:"queue_delay",bson:"queue_delay"`
+	OverheadDelay uint64 `json:"overhead_delay",bson:"overhead_delay"`
+	Stderr        string `json:"stderr",bson:"stderr"`
+	Stdout        string `json:"stdout",bson:"stdout"`
 
 	Collected Collected `json:"collected,omitempty",bson:"collected,omitempty"`
 
@@ -181,15 +180,8 @@ func JobHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // JobSubmitHandler enqueues a new job associated with the authenticated account.
 func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	type RequestJob struct {
-		Job
-
-		RawResultSource string `json:"result_source"`
-		RawResultType   string `json:"result_type"`
-	}
-
 	type Request struct {
-		Jobs []RequestJob `json:"jobs"`
+		Jobs []Job `json:"jobs"`
 	}
 
 	type Response struct {
