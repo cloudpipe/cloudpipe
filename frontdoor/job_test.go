@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 )
 
 // JobStorage is a fake Storage implementation that only provides job-relevant storage methods.
@@ -33,7 +32,7 @@ func TestJobHandlerBadRequest(t *testing.T) {
 	JobHandler(c, w, r)
 
 	hasError(t, w, http.StatusMethodNotAllowed, RhoError{
-		Code:    "3",
+		Code:    CodeMethodNotSupported,
 		Message: "Method not supported",
 		Retry:   false,
 	})
@@ -56,13 +55,13 @@ func TestSubmitJob(t *testing.T) {
 	}
 	r.SetBasicAuth("admin", "12345")
 	w := httptest.NewRecorder()
-	s := JobStorage{}
+	s := &JobStorage{}
 	c := &Context{
 		Settings: Settings{
 			AdminName: "admin",
 			AdminKey:  "12345",
 		},
-		Storage: &s,
+		Storage: s,
 	}
 
 	JobHandler(c, w, r)
@@ -79,7 +78,7 @@ func TestSubmitJob(t *testing.T) {
 		t.Fatalf("Unable to parse response body as JSON: [%s]", string(out))
 	}
 	if len(response.JIDs) != 1 {
-		t.Errorf("Expected one JID, received [%d]", len(response.JIDs))
+		t.Fatalf("Expected one JID, received [%d]", len(response.JIDs))
 	}
 	if response.JIDs[0] != 42 {
 		t.Errorf("Expected to be assigned ID 42, got [%d]", response.JIDs[0])
@@ -92,14 +91,13 @@ func TestSubmitJob(t *testing.T) {
 		t.Errorf("Expected submitted job to be in state queued, not [%s]", s.Submitted.Status)
 	}
 
-	var zero = JSONTime(time.Time{})
-	if s.Submitted.CreatedAt == zero {
+	if s.Submitted.CreatedAt == 0 {
 		t.Error("Expected the job's CreatedAt time to be populated.")
 	}
-	if s.Submitted.StartedAt != zero {
+	if s.Submitted.StartedAt != 0 {
 		t.Errorf("Expected the job's StartedAt time to be zero, but was [%s]", s.Submitted.StartedAt)
 	}
-	if s.Submitted.FinishedAt != zero {
+	if s.Submitted.FinishedAt != 0 {
 		t.Errorf("Expected the job's FinishedAt time to be zero, but was [%s]", s.Submitted.FinishedAt)
 	}
 }
@@ -131,8 +129,8 @@ func TestSubmitJobBadResultSource(t *testing.T) {
 	JobHandler(c, w, r)
 
 	hasError(t, w, http.StatusBadRequest, RhoError{
-		Code:    "6",
-		Message: "Invalid result_source.",
+		Code:    CodeInvalidResultSource,
+		Message: "Invalid result source [magic]",
 		Retry:   false,
 	})
 }
@@ -164,8 +162,8 @@ func TestSubmitJobBadResultType(t *testing.T) {
 	JobHandler(c, w, r)
 
 	hasError(t, w, http.StatusBadRequest, RhoError{
-		Code:    "7",
-		Message: "Invalid result_type.",
+		Code:    CodeInvalidResultType,
+		Message: "Invalid result type [elsewhere]",
 		Retry:   false,
 	})
 }

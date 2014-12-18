@@ -68,23 +68,41 @@ func (e RhoError) Report(status int, w http.ResponseWriter) error {
 	return err
 }
 
-// JSONTime is a Time that understands how to marshal and unmarshal itself from JSON strings.
-type JSONTime time.Time
+func (e *RhoError) Error() string {
+	return e.Message
+}
 
-const timeFormat = `"2006-01-02 15:04:05.000"`
+// StoredTime is a Time that can be parsed from strings in incoming JSON data, but can also be
+// stored gracefully in BSON.
+type StoredTime int64
 
-func (t *JSONTime) String() string {
-	return time.Time(*t).UTC().Format(timeFormat)
+const (
+	timeFormat   = `2006-01-02 15:04:05.000`
+	quotedFormat = `"` + timeFormat + `"`
+)
+
+// StoreTime stores a Go time.Time object as a StoredTime.
+func StoreTime(t time.Time) StoredTime {
+	return StoredTime(t.UTC().UnixNano())
+}
+
+// AsTime converts a StoredTime back to a Go time.Time.
+func (t *StoredTime) AsTime() time.Time {
+	return time.Unix(0, int64(*t)).UTC()
+}
+
+func (t *StoredTime) String() string {
+	return t.AsTime().Format(timeFormat)
 }
 
 // MarshalJSON encodes a JSONTime as a UTC timestamp string.
-func (t *JSONTime) MarshalJSON() ([]byte, error) {
-	return []byte(t.String()), nil
+func (t *StoredTime) MarshalJSON() ([]byte, error) {
+	return []byte(t.AsTime().Format(quotedFormat)), nil
 }
 
 // UnmarshalJSON decodes a UTC timestamp string into a time.
-func (t *JSONTime) UnmarshalJSON(input []byte) error {
-	parsed, err := time.Parse(timeFormat, string(input))
-	*t = JSONTime(parsed)
+func (t *StoredTime) UnmarshalJSON(input []byte) error {
+	parsed, err := time.Parse(quotedFormat, string(input))
+	*t = StoredTime(parsed.UTC().UnixNano())
 	return err
 }
