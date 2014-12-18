@@ -8,7 +8,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"gopkg.in/mgo.v2/bson"
 )
 
 // JobLayer associates a Layer with a Job.
@@ -159,8 +158,8 @@ type SubmittedJob struct {
 
 	Collected Collected `json:"collected,omitempty",bson:"collected,omitempty"`
 
-	JID     bson.ObjectId `json:"-",bson:"_id"`
-	Account string        `json:"-",bson:"account"`
+	JID     uint64 `json:"-",bson:"_id"`
+	Account string `json:"-",bson:"account"`
 }
 
 // JobHandler dispatches API calls to /job based on request type.
@@ -272,6 +271,7 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			Job:       job,
 			CreatedAt: JSONTime(time.Now()),
 			Status:    StatusQueued,
+			Account:   account.Name,
 		}
 		jid, err := c.InsertJob(submitted)
 		if err != nil {
@@ -290,9 +290,10 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 
 		jids[index] = jid
 		log.WithFields(log.Fields{
+			"jid":     jid,
 			"job":     job,
 			"account": account.Name,
-		}).Info("Succesfully submitted a job.")
+		}).Info("Successfully submitted a job.")
 	}
 
 	response := Response{JIDs: jids}
