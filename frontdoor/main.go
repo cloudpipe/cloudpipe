@@ -73,10 +73,13 @@ type JSONTime time.Time
 
 const timeFormat = `"2006-01-02 15:04:05.000"`
 
+func (t *JSONTime) String() string {
+	return time.Time(*t).UTC().Format(timeFormat)
+}
+
 // MarshalJSON encodes a JSONTime as a UTC timestamp string.
 func (t *JSONTime) MarshalJSON() ([]byte, error) {
-	stamp := time.Time(*t).UTC().Format(timeFormat)
-	return []byte(stamp), nil
+	return []byte(t.String()), nil
 }
 
 // UnmarshalJSON decodes a UTC timestamp string into a time.

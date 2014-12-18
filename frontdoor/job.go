@@ -269,7 +269,7 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		// Pack the job into a SubmittedJob and store it.
 		submitted := SubmittedJob{
 			Job:       job,
-			CreatedAt: JSONTime(time.Now()),
+			CreatedAt: JSONTime(time.Now().UTC()),
 			Status:    StatusQueued,
 			Account:   account.Name,
 		}
