@@ -18,15 +18,20 @@ func main() {
 		return
 	}
 
-	http.HandleFunc("/api/job", BindContext(c, JobHandler))
-	http.HandleFunc("/api/job/kill", BindContext(c, JobKillHandler))
-	http.HandleFunc("/api/job/kill_all", BindContext(c, JobKillAllHandler))
-	http.HandleFunc("/api/job/queue_stats", BindContext(c, JobQueueStatsHandler))
+	if c.Web {
+		http.HandleFunc("/api/job", BindContext(c, JobHandler))
+		http.HandleFunc("/api/job/kill", BindContext(c, JobKillHandler))
+		http.HandleFunc("/api/job/kill_all", BindContext(c, JobKillAllHandler))
+		http.HandleFunc("/api/job/queue_stats", BindContext(c, JobQueueStatsHandler))
 
-	log.Info("Commence primary ignition.")
-	http.ListenAndServe(c.ListenAddr(), nil)
+		log.Info("Commence primary ignition.")
+		http.ListenAndServe(c.ListenAddr(), nil)
+	}
 
-	fmt.Println("I exist")
+	if c.Runner {
+		log.Info("Launching job runner.")
+		go Runner(c)
+	}
 }
 
 // ContextHandler is an HTTP HandlerFunc that accepts an additional parameter containing the
