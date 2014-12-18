@@ -13,6 +13,18 @@ type Storage interface {
 	Bootstrap() error
 
 	InsertJob(SubmittedJob) (uint64, error)
+	ListJobs(JobQuery) ([]SubmittedJob, error)
+}
+
+// JobQuery specifies (all optional) query parameters for fetching jobs.
+type JobQuery struct {
+	JIDs     []uint64
+	Names    []string
+	Statuses []string
+
+	Limit  int
+	Before uint64
+	After  uint64
 }
 
 // MongoStorage is a Storage implementation that connects to a real MongoDB cluster.
@@ -85,16 +97,91 @@ func (storage *MongoStorage) InsertJob(job SubmittedJob) (uint64, error) {
 	return job.JID, nil
 }
 
+// ListJobs queries jobs that have been submitted to the cluster.
+func (storage *MongoStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
+	q := bson.M{}
+
+	switch len(query.JIDs) {
+	case 0:
+		if query.Before != 0 {
+			q["_id"] = bson.M{"$lt": query.Before}
+		}
+
+		if query.After != 0 {
+			q["_id"] = bson.M{"$gte": query.After}
+		}
+	case 1:
+		only := query.JIDs[0]
+		if query.Before != 0 && only >= query.Before {
+			return []SubmittedJob{}, nil
+		}
+		if query.After != 0 && only < query.After {
+			return []SubmittedJob{}, nil
+		}
+
+		q["_id"] = query.JIDs[0]
+	default:
+		var filtered []uint64
+
+		if query.Before != 0 || query.After != 0 {
+			filtered = make([]uint64, 0, len(query.JIDs))
+			for _, jid := range query.JIDs {
+				if (query.Before == 0 || jid < query.Before) && (query.After == 0 || jid >= query.After) {
+					filtered = append(filtered, jid)
+				}
+			}
+
+			if len(filtered) == 0 {
+				return []SubmittedJob{}, nil
+			}
+		} else {
+			filtered = query.JIDs
+		}
+
+		q["_id"] = bson.M{"$in": filtered}
+	}
+
+	switch len(query.Names) {
+	case 0:
+	case 1:
+		q["job.name"] = query.Names[0]
+	default:
+		q["job.name"] = bson.M{"$in": query.Names}
+	}
+
+	switch len(query.Statuses) {
+	case 0:
+	case 1:
+		q["status"] = query.Statuses[0]
+	default:
+		q["status"] = bson.M{"$in": query.Statuses}
+	}
+
+	var result []SubmittedJob
+	if err := storage.jobs().Find(q).Limit(query.Limit).All(&result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // NullStorage is a useful embeddable struct that can be used to mock selected storage calls without
 // needing to stub out all of the ones you don't care about.
 type NullStorage struct{}
 
+// Ensure that NullStorage adheres to the Storage interface.
+var _ Storage = NullStorage{}
+
 // Bootstrap is a no-op.
-func (storage *NullStorage) Bootstrap() error {
+func (storage NullStorage) Bootstrap() error {
 	return nil
 }
 
 // InsertJob is a no-op.
-func (storage *NullStorage) InsertJob(job SubmittedJob) (uint64, error) {
+func (storage NullStorage) InsertJob(job SubmittedJob) (uint64, error) {
 	return 0, nil
+}
+
+// ListJobs returns an empty collection.
+func (storage NullStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
+	return []SubmittedJob{}, nil
 }

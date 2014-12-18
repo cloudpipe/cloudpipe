@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,12 +13,12 @@ import (
 
 // JobLayer associates a Layer with a Job.
 type JobLayer struct {
-	Name string `json:"name",bson:"name"`
+	Name string `json:"name" bson:"name"`
 }
 
 // JobVolume associates one or more Volumes with a Job.
 type JobVolume struct {
-	Name string `json:"name",bson:"name"`
+	Name string `json:"name" bson:"name"`
 }
 
 const (
@@ -74,30 +75,30 @@ var (
 
 // Collected contains various metrics about the running job.
 type Collected struct {
-	CPUTimeUser     uint64 `json:"cputime_user,omitempty"`
-	CPUTimeSystem   uint64 `json:"cputime_system,omitempty"`
-	MemoryFailCount uint64 `json:"memory_failcnt,omitempty"`
-	MemoryMaxUsage  uint64 `json:"memory_max_usage,omitempty"`
+	CPUTimeUser     uint64 `json:"cputime_user,omitempty" bson:"cputime_user,omitempty"`
+	CPUTimeSystem   uint64 `json:"cputime_system,omitempty" bson:"cputime_system,omitempty"`
+	MemoryFailCount uint64 `json:"memory_failcnt,omitempty" bson:"memory_failcnt,omitempty"`
+	MemoryMaxUsage  uint64 `json:"memory_max_usage,omitempty" bson:"memory_max_usage,omitempty"`
 }
 
 // Job is a user-submitted compute task to be executed in an appropriate Docker container.
 type Job struct {
-	Command      string            `json:"cmd",bson:"cmd"`
-	Name         *string           `json:"name,omitempty",bson:"name,omitempty"`
-	Core         string            `json:"core",bson:"core"`
-	Multicore    int               `json:"multicore",bson:"multicore"`
-	Restartable  bool              `json:"restartable",bson:"restartable"`
-	Tags         map[string]string `json:"tags",bson:"tags"`
-	Layers       []JobLayer        `json:"layer",bson:"layer"`
-	Volumes      []JobVolume       `json:"vol",bson:"vol"`
-	Environment  map[string]string `json:"env",bson:"env"`
-	ResultSource string            `json:"result_source",bson:"result_source"`
-	ResultType   string            `json:"result_type",bson:"result_type"`
-	MaxRuntime   int               `json:"max_runtime",bson:"max_runtime"`
-	Stdin        []byte            `json:"stdin",bson:"stdin"`
+	Command      string            `json:"cmd" bson:"cmd"`
+	Name         *string           `json:"name,omitempty" bson:"name,omitempty"`
+	Core         string            `json:"core" bson:"core"`
+	Multicore    int               `json:"multicore" bson:"multicore"`
+	Restartable  bool              `json:"restartable" bson:"restartable"`
+	Tags         map[string]string `json:"tags" bson:"tags"`
+	Layers       []JobLayer        `json:"layer" bson:"layer"`
+	Volumes      []JobVolume       `json:"vol" bson:"vol"`
+	Environment  map[string]string `json:"env" bson:"env"`
+	ResultSource string            `json:"result_source" bson:"result_source"`
+	ResultType   string            `json:"result_type" bson:"result_type"`
+	MaxRuntime   int               `json:"max_runtime" bson:"max_runtime"`
+	Stdin        []byte            `json:"stdin" bson:"stdin"`
 
-	Profile   *bool   `json:"profile,omitempty",bson:"profile,omitempty"`
-	DependsOn *string `json:"depends_on,omitempty",bson:"depends_on,omitempty"`
+	Profile   *bool   `json:"profile,omitempty" bson:"profile,omitempty"`
+	DependsOn *string `json:"depends_on,omitempty" bson:"depends_on,omitempty"`
 }
 
 // Validate ensures that all required fields have non-zero values, and that enum-like fields have
@@ -142,23 +143,23 @@ func (j Job) Validate() *RhoError {
 type SubmittedJob struct {
 	Job
 
-	CreatedAt  StoredTime `json:"created_at",bson:"created_at"`
-	StartedAt  StoredTime `json:"started_at,omitempty",bson:"started_at"`
-	FinishedAt StoredTime `json:"finished_at,omitempty",bson:"finished_at"`
+	CreatedAt  StoredTime `json:"created_at" bson:"created_at"`
+	StartedAt  StoredTime `json:"started_at,omitempty" bson:"started_at"`
+	FinishedAt StoredTime `json:"finished_at,omitempty" bson:"finished_at"`
 
-	Status        string `json:"status",bson:"status"`
-	Result        string `json:"result",bson:"result"`
-	ReturnCode    string `json:"return_code",bson:"return_code"`
-	Runtime       uint64 `json:"runtime",bson:"runtime"`
-	QueueDelay    uint64 `json:"queue_delay",bson:"queue_delay"`
-	OverheadDelay uint64 `json:"overhead_delay",bson:"overhead_delay"`
-	Stderr        string `json:"stderr",bson:"stderr"`
-	Stdout        string `json:"stdout",bson:"stdout"`
+	Status        string `json:"status" bson:"status"`
+	Result        string `json:"result" bson:"result"`
+	ReturnCode    string `json:"return_code" bson:"return_code"`
+	Runtime       uint64 `json:"runtime" bson:"runtime"`
+	QueueDelay    uint64 `json:"queue_delay" bson:"queue_delay"`
+	OverheadDelay uint64 `json:"overhead_delay" bson:"overhead_delay"`
+	Stderr        string `json:"stderr" bson:"stderr"`
+	Stdout        string `json:"stdout" bson:"stdout"`
 
-	Collected Collected `json:"collected,omitempty",bson:"collected,omitempty"`
+	Collected Collected `json:"collected,omitempty" bson:"collected,omitempty"`
 
-	JID     uint64 `json:"-",bson:"_id"`
-	Account string `json:"-",bson:"account"`
+	JID     uint64 `json:"jid" bson:"_id"`
+	Account string `json:"-" bson:"account"`
 }
 
 // JobHandler dispatches API calls to /job based on request type.
@@ -266,7 +267,127 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 // JobListHandler provides updated details about one or more jobs currently submitted to the
 // cluster.
 func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, `[]`)
+	account, err := Authenticate(c, w, r)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Authentication failure.")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		RhoError{
+			Code:    CodeUnableToParseQuery,
+			Message: fmt.Sprintf("Unable to parse query parameters: %v", err),
+			Hint:    "You broke Go's URL parsing somehow! Make URLs that suck less.",
+			Retry:   false,
+		}.Log(account).Report(http.StatusBadRequest, w)
+		return
+	}
+
+	q := JobQuery{}
+	if rawJIDs, ok := r.Form["jid"]; ok {
+		jids := make([]uint64, len(rawJIDs))
+		for i, rawJID := range rawJIDs {
+			if jids[i], err = strconv.ParseUint(rawJID, 10, 64); err != nil {
+				RhoError{
+					Code:    CodeUnableToParseQuery,
+					Message: fmt.Sprintf("Unable to parse JID [%s]: %v", rawJID, err),
+					Hint:    "Please only use valid JIDs.",
+					Retry:   false,
+				}.Log(account).Report(http.StatusBadRequest, w)
+				return
+			}
+		}
+		q.JIDs = jids
+	}
+	if names, ok := r.Form["name"]; ok {
+		q.Names = names
+	}
+	if statuses, ok := r.Form["status"]; ok {
+		q.Statuses = statuses
+	}
+	if rawLimit := r.FormValue("limit"); rawLimit != "" {
+		limit, err := strconv.ParseInt(rawLimit, 10, 0)
+		if err != nil {
+			RhoError{
+				Code:    CodeUnableToParseQuery,
+				Message: fmt.Sprintf("Unable to parse limit [%s]: %v", rawLimit, err),
+				Hint:    "Please specify a valid integral limit.",
+				Retry:   false,
+			}.Log(account).Report(http.StatusBadRequest, w)
+			return
+		}
+
+		if limit > 9999 {
+			limit = 9999
+		}
+		if limit < 1 {
+			RhoError{
+				Code:    CodeUnableToParseQuery,
+				Message: fmt.Sprintf("Invalid negative or zero limit [%d]", limit),
+				Hint:    "Please specify a valid, positive integral limit.",
+				Retry:   false,
+			}.Log(account).Report(http.StatusBadRequest, w)
+			return
+		}
+		q.Limit = int(limit)
+	} else {
+		q.Limit = 1000
+	}
+
+	if rawBefore := r.FormValue("before"); rawBefore != "" {
+		before, err := strconv.ParseUint(rawBefore, 10, 64)
+		if err != nil {
+			RhoError{
+				Code:    CodeUnableToParseQuery,
+				Message: fmt.Sprintf(`Unable to parse Before bound [%s]: %v`, rawBefore, err),
+				Hint:    "Please specify a valid integral JID as the lower bound.",
+				Retry:   false,
+			}.Log(account).Report(http.StatusBadRequest, w)
+			return
+		}
+		q.Before = before
+	}
+	if rawAfter := r.FormValue("after"); rawAfter != "" {
+		after, err := strconv.ParseUint(rawAfter, 10, 64)
+		if err != nil {
+			RhoError{
+				Code:    CodeUnableToParseQuery,
+				Message: fmt.Sprintf(`Unable to parse After bound [%s]: %v`, rawAfter, err),
+				Hint:    "Please specify a valid integral JID as the upper bound.",
+				Retry:   false,
+			}.Log(account).Report(http.StatusBadRequest, w)
+			return
+		}
+		q.After = after
+	}
+
+	results, err := c.ListJobs(q)
+	if err != nil {
+		re := RhoError{
+			Code:    CodeListFailure,
+			Message: fmt.Sprintf("Unable to list jobs: %v", err),
+			Hint:    "This is most likely a database problem.",
+			Retry:   true,
+		}
+		re.Log(account).Report(http.StatusServiceUnavailable, w)
+		return
+	}
+
+	var response struct {
+		Jobs []SubmittedJob `json:"jobs"`
+	}
+	response.Jobs = results
+
+	log.WithFields(log.Fields{
+		"query":        q,
+		"result count": len(results),
+		"account":      account.Name,
+	}).Debug("Successful job query.")
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 // JobKillHandler allows a user to prematurely terminate a running job.

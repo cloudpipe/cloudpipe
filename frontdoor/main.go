@@ -68,6 +68,17 @@ func (e RhoError) Report(status int, w http.ResponseWriter) error {
 	return err
 }
 
+// Log logs a RhoError at the ERROR level.
+func (e RhoError) Log(account *Account) RhoError {
+	f := log.Fields{"error": e}
+	if account != nil {
+		f["account"] = account.Name
+	}
+
+	log.WithFields(f).Error(e.Message)
+	return e
+}
+
 func (e *RhoError) Error() string {
 	return e.Message
 }
