@@ -5,7 +5,7 @@ import "gopkg.in/mgo.v2"
 // Storage enumerates interactions with the storage engine, and allows us to interject in-memory
 // substitutes for testing.
 type Storage interface {
-	Connect(*Context) error
+	Bootstrap() error
 
 	InsertJob(SubmittedJob) (uint, error)
 }
@@ -15,13 +15,21 @@ type MongoStorage struct {
 	Database *mgo.Database
 }
 
-// Connect establishes a connection to the cluster.
-func (storage *MongoStorage) Connect(c *Context) error {
+// NewMongoStorage establishes a connection to the MongoDB cluster.
+func NewMongoStorage(c *Context) (*MongoStorage, error) {
 	session, err := mgo.Dial(c.Settings.MongoURL)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	storage.Database = session.DB("rho")
+	return &MongoStorage{Database: session.DB("rho")}, nil
+}
+
+func (storage *MongoStorage) jobs() *mgo.Collection {
+	return storage.Database.C("jobs")
+}
+
+// Bootstrap creates indices and metadata objects.
+func (storage *MongoStorage) Bootstrap() error {
 	return nil
 }
 
@@ -29,7 +37,7 @@ func (storage *MongoStorage) Connect(c *Context) error {
 
 // InsertJob appends a job to the queue and returns a newly allocated job ID.
 func (storage *MongoStorage) InsertJob(job SubmittedJob) (uint, error) {
-	if err := storage.Database.C("jobs").Insert(job); err != nil {
+	if err := storage.jobs().Insert(job); err != nil {
 		return 0, err
 	}
 
@@ -40,7 +48,7 @@ func (storage *MongoStorage) InsertJob(job SubmittedJob) (uint, error) {
 // needing to stub out all of the ones you don't care about.
 type NullStorage struct{}
 
-// Connect always succeeds.
-func (storage NullStorage) Connect(c *Context) error {
-	return nil
+// InsertJob is a no-op.
+func (storage *NullStorage) InsertJob(job SubmittedJob) (uint, error) {
+	return 0, nil
 }
