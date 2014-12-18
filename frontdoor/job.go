@@ -158,7 +158,7 @@ type SubmittedJob struct {
 
 	Collected Collected `json:"collected,omitempty" bson:"collected,omitempty"`
 
-	JID     uint64 `json:"-" bson:"_id"`
+	JID     uint64 `json:"jid" bson:"_id"`
 	Account string `json:"-" bson:"account"`
 }
 
