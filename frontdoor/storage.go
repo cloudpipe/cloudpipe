@@ -18,6 +18,8 @@ type Storage interface {
 
 // JobQuery specifies (all optional) query parameters for fetching jobs.
 type JobQuery struct {
+	AccountName string
+
 	JIDs     []uint64
 	Names    []string
 	Statuses []string
@@ -99,7 +101,7 @@ func (storage *MongoStorage) InsertJob(job SubmittedJob) (uint64, error) {
 
 // ListJobs queries jobs that have been submitted to the cluster.
 func (storage *MongoStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
-	q := bson.M{}
+	q := bson.M{"account": query.AccountName}
 
 	switch len(query.JIDs) {
 	case 0:

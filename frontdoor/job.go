@@ -285,7 +285,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	q := JobQuery{}
+	q := JobQuery{AccountName: account.Name}
 	if rawJIDs, ok := r.Form["jid"]; ok {
 		jids := make([]uint64, len(rawJIDs))
 		for i, rawJID := range rawJIDs {
