@@ -205,8 +205,8 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		}).Error("Unable to parse JSON.")
 
 		RhoError{
-			Code:    "5",
-			Message: "Unable to parse job payload as JSON.",
+			Code:    CodeInvalidJobJSON,
+			Message: fmt.Sprintf("Unable to parse job payload as JSON: %v", err),
 			Hint:    "Please supply valid JSON in your request.",
 			Retry:   false,
 		}.Report(http.StatusBadRequest, w)
@@ -214,54 +214,23 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	jids := make([]uint64, len(req.Jobs))
-	for index, rjob := range req.Jobs {
-		job := rjob.Job
-
-		// Interpret the deferred fields.
-		if rjob.RawResultSource == "stdout" {
-			job.ResultSource = StdoutResult
-		} else if strings.HasPrefix(rjob.RawResultSource, "file:") {
-			path := rjob.RawResultSource[len("file:") : len(rjob.RawResultSource)-1]
-			job.ResultSource = FileResult{Path: path}
-		} else {
+	for index, job := range req.Jobs {
+		// Validate the job.
+		if err := job.Validate(); err != nil {
 			log.WithFields(log.Fields{
-				"account":       account.Name,
-				"result_source": rjob.RawResultSource,
-			}).Error("Invalid result_source in a submitted job.")
+				"account": account.Name,
+				"job":     job,
+				"error":   err,
+			}).Error("Invalid job submitted.")
 
-			RhoError{
-				Code:    "6",
-				Message: "Invalid result_source.",
-				Hint:    `"result_source" must be either "stdout" or "file:{path}".`,
-				Retry:   false,
-			}.Report(http.StatusBadRequest, w)
-			return
-		}
-
-		switch rjob.RawResultType {
-		case BinaryResult.name:
-			job.ResultType = BinaryResult
-		case PickleResult.name:
-			job.ResultType = PickleResult
-		default:
-			log.WithFields(log.Fields{
-				"account":     account.Name,
-				"result_type": rjob.RawResultType,
-			}).Error("Invalid result_type in a submitted job.")
-
-			RhoError{
-				Code:    "7",
-				Message: "Invalid result_type.",
-				Hint:    `"result_type" must be either "binary" or "pickle".`,
-				Retry:   false,
-			}.Report(http.StatusBadRequest, w)
+			err.Report(http.StatusBadRequest, w)
 			return
 		}
 
 		// Pack the job into a SubmittedJob and store it.
 		submitted := SubmittedJob{
 			Job:       job,
-			CreatedAt: JSONTime(time.Now().UTC()),
+			CreatedAt: StoreTime(time.Now()),
 			Status:    StatusQueued,
 			Account:   account.Name,
 		}
@@ -273,7 +242,7 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			}).Error("Unable to enqueue a submitted job.")
 
 			RhoError{
-				Code:    "8",
+				Code:    CodeEnqueueFailure,
 				Message: "Unable to enqueue your job.",
 				Retry:   true,
 			}.Report(http.StatusServiceUnavailable, w)
