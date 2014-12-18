@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"gopkg.in/mgo.v2/bson"
 )
 
 // JobLayer associates a Layer with a Job.
@@ -157,7 +159,8 @@ type SubmittedJob struct {
 
 	Collected Collected `json:"collected,omitempty",bson:"collected,omitempty"`
 
-	Account string `json:"-",bson:"account"`
+	JID     bson.ObjectId `json:"-",bson:"_id"`
+	Account string        `json:"-",bson:"account"`
 }
 
 // JobHandler dispatches API calls to /job based on request type.
@@ -191,7 +194,7 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Response struct {
-		JIDs []uint `json:"jids"`
+		JIDs []uint64 `json:"jids"`
 	}
 
 	account, err := Authenticate(c, w, r)
@@ -201,11 +204,6 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		}).Error("Authentication failure.")
 		return
 	}
-
-	// body, err := ioutil.ReadAll(r.Body)
-	// log.WithFields(log.Fields{
-	// 	"body": string(body),
-	// }).Info("Request body")
 
 	var req Request
 	err = json.NewDecoder(r.Body).Decode(&req)
@@ -224,7 +222,7 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jids := make([]uint, len(req.Jobs))
+	jids := make([]uint64, len(req.Jobs))
 	for index, rjob := range req.Jobs {
 		job := rjob.Job
 
@@ -269,7 +267,28 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		jids[index] = uint(index)
+		// Pack the job into a SubmittedJob and store it.
+		submitted := SubmittedJob{
+			Job:       job,
+			CreatedAt: JSONTime(time.Now()),
+			Status:    StatusQueued,
+		}
+		jid, err := c.InsertJob(submitted)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"account": account.Name,
+				"error":   err,
+			}).Error("Unable to enqueue a submitted job.")
+
+			RhoError{
+				Code:    "8",
+				Message: "Unable to enqueue your job.",
+				Retry:   true,
+			}.Report(http.StatusServiceUnavailable, w)
+			return
+		}
+
+		jids[index] = jid
 		log.WithFields(log.Fields{
 			"job":     job,
 			"account": account.Name,
