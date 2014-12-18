@@ -89,6 +89,11 @@ func (storage *MongoStorage) InsertJob(job SubmittedJob) (uint64, error) {
 // needing to stub out all of the ones you don't care about.
 type NullStorage struct{}
 
+// Bootstrap is a no-op.
+func (storage *NullStorage) Bootstrap() error {
+	return nil
+}
+
 // InsertJob is a no-op.
 func (storage *NullStorage) InsertJob(job SubmittedJob) (uint64, error) {
 	return 0, nil
