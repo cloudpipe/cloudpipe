@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -21,14 +20,14 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 	accountName, apiKey, ok := r.BasicAuth()
 	if !ok {
 		// Credentials not provided.
-		RhoError{
-			Code:    "1",
+		err := &RhoError{
+			Code:    CodeCredentialsMissing,
 			Message: "You must authenticate.",
-			Hint:    "Try using multivac.set_key(api_key='username', api_secret_key='API key', api_url='') before calling other multivac methods.",
+			Hint:    "Try using multivac.config.set_key(api_key='username', api_secret_key='API key', api_url='') before calling other multivac methods.",
 			Retry:   false,
-		}.Report(http.StatusUnauthorized, w)
-
-		return nil, errors.New("Credentials not provided")
+		}
+		err.Report(http.StatusUnauthorized, w)
+		return nil, err
 	}
 
 	if c.Settings.AdminName != "" && c.Settings.AdminKey != "" {
@@ -45,11 +44,12 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 		}
 	}
 
-	RhoError{
-		Code:    "2",
-		Message: "Unable to authenticate.",
-		Hint:    "Double-check the account name and API key you're providing to multivac.set_key().",
+	err := &RhoError{
+		Code:    CodeCredentialsIncorrect,
+		Message: fmt.Sprintf("Unable to authenticate account [%s]", accountName),
+		Hint:    "Double-check the account name and API key you're providing to multivac.config.set_key().",
 		Retry:   false,
-	}.Report(http.StatusUnauthorized, w)
-	return nil, fmt.Errorf("Authentication failure for account [%s]", accountName)
+	}
+	err.Report(http.StatusUnauthorized, w)
+	return nil, err
 }

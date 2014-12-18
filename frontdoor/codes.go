@@ -1,6 +1,11 @@
 package main
 
 const (
+	// CodeCredentialsMissing means a request that was required to be authenticated had no auth data.
+	CodeCredentialsMissing = "ANONE"
+	// CodeCredentialsIncorrect means auth data on a request was present, but incorrect.
+	CodeCredentialsIncorrect = "AFAIL"
+
 	// CodeInvalidJobJSON means a POST body to /jobs was not parseable JSON.
 	CodeInvalidJobJSON = "JPRS"
 	// CodeMissingCommand means a job is missing a "cmd" element.

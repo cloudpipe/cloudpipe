@@ -28,7 +28,7 @@ func TestAuthenticateMissingCredentials(t *testing.T) {
 	}
 
 	hasError(t, w, http.StatusUnauthorized, RhoError{
-		Code:    "1",
+		Code:    CodeCredentialsMissing,
 		Message: "You must authenticate.",
 		Retry:   false,
 	})
@@ -69,8 +69,8 @@ func TestAuthenticateUnknownAccount(t *testing.T) {
 	}
 
 	hasError(t, w, http.StatusUnauthorized, RhoError{
-		Code:    "2",
-		Message: "Unable to authenticate.",
+		Code:    CodeCredentialsIncorrect,
+		Message: "Unable to authenticate account [wrong]",
 		Retry:   false,
 	})
 }
