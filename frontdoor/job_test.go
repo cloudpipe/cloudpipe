@@ -282,10 +282,34 @@ func TestListJobsByMultipleIDs(t *testing.T) {
 	}
 }
 
-func TestListJobsByName(t *testing.T) {
-	t.Fatalf("pending")
+func TestListJobsBySingleName(t *testing.T) {
+	q := jobListQuery(t, "https://localhost/api/jobs?name=foo")
+
+	if len(q.Names) != 1 {
+		t.Errorf("Expected a single name, got [%v]", q.Names)
+	}
+	if q.Names[0] != "foo" {
+		t.Errorf("Expected JID to be foo, got [%s]", q.Names[0])
+	}
 }
 
-func TestListJobsClampLimit(t *testing.T) {
-	t.Fatalf("pending")
+func TestListJobsByMultipleNames(t *testing.T) {
+	q := jobListQuery(t, "https://localhost/api/jobs?name=foo&name=bar")
+
+	if len(q.Names) != 2 {
+		t.Errorf("Expected two names, got [%v]", q.Names)
+	}
+	for i, expected := range []string{"foo", "bar"} {
+		if q.Names[i] != expected {
+			t.Errorf("Expected name %d to be [%s], got [%s]", i, expected, q.Names[i])
+		}
+	}
+}
+
+func TestListJobsMaximumLimit(t *testing.T) {
+	q := jobListQuery(t, "https://localhost/api/jobs?name=foo&limit=99999999")
+
+	if q.Limit != 9999 {
+		t.Errorf("Expected handler to clamp limit to 9999, but was %d", q.Limit)
+	}
 }
