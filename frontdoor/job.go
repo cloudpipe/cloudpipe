@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -266,7 +267,126 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 // JobListHandler provides updated details about one or more jobs currently submitted to the
 // cluster.
 func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, `[]`)
+	account, err := Authenticate(c, w, r)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Authentication failure.")
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		log.WithFields(log.Fields{
+			"error":   err,
+			"account": account.Name,
+		}).Error("Unable to parse request parameters.")
+
+		RhoError{
+			Code:    CodeUnableToParseQuery,
+			Message: fmt.Sprintf("Unable to parse query parameters: %v", err),
+			Hint:    "You broke Go's URL parsing somehow! Make URLs that suck less.",
+			Retry:   false,
+		}.Report(http.StatusBadRequest, w)
+		return
+	}
+
+	q := JobQuery{}
+	if rawJIDs, ok := r.Form["jid"]; ok {
+		jids := make([]uint64, len(rawJIDs))
+		for i, rawJID := range rawJIDs {
+			if jids[i], err = strconv.ParseUint(rawJID, 10, 64); err != nil {
+				RhoError{
+					Code:    CodeUnableToParseQuery,
+					Message: fmt.Sprintf("Unable to parse JID [%s]: %v", rawJID, err),
+					Hint:    "Please only use valid JIDs.",
+					Retry:   false,
+				}.Report(http.StatusBadRequest, w)
+				return
+			}
+		}
+		q.JIDs = jids
+	}
+	if names, ok := r.Form["name"]; ok {
+		q.Names = names
+	}
+	if statuses, ok := r.Form["status"]; ok {
+		q.Statuses = statuses
+	}
+	if rawLimit := r.FormValue("limit"); rawLimit != "" {
+		limit, err := strconv.ParseInt(rawLimit, 10, 0)
+		if err != nil {
+			RhoError{
+				Code:    CodeUnableToParseQuery,
+				Message: fmt.Sprintf("Unable to parse limit [%s]: %v", rawLimit, err),
+				Hint:    "Please specify a valid integral limit.",
+				Retry:   false,
+			}.Report(http.StatusBadRequest, w)
+			return
+		}
+
+		if limit > 9999 {
+			limit = 9999
+		}
+		if limit < 1 {
+			RhoError{
+				Code:    CodeUnableToParseQuery,
+				Message: fmt.Sprintf("Invalid negative or zero limit [%d]", limit),
+				Hint:    "Please specify a valid, positive integral limit.",
+				Retry:   false,
+			}.Report(http.StatusBadRequest, w)
+			return
+		}
+		q.Limit = int(limit)
+	} else {
+		q.Limit = 1000
+	}
+
+	if rawBefore := r.FormValue("before"); rawBefore != "" {
+		before, err := strconv.ParseUint(rawBefore, 10, 64)
+		if err != nil {
+			RhoError{
+				Code:    CodeUnableToParseQuery,
+				Message: fmt.Sprintf(`Unable to parse Before bound [%s]: %v`, rawBefore, err),
+				Hint:    "Please specify a valid integral JID as the lower bound.",
+				Retry:   false,
+			}.Report(http.StatusBadRequest, w)
+			return
+		}
+		q.Before = before
+	}
+	if rawAfter := r.FormValue("after"); rawAfter != "" {
+		after, err := strconv.ParseUint(rawAfter, 10, 64)
+		if err != nil {
+			RhoError{
+				Code:    CodeUnableToParseQuery,
+				Message: fmt.Sprintf(`Unable to parse After bound [%s]: %v`, rawAfter, err),
+				Hint:    "Please specify a valid integral JID as the upper bound.",
+				Retry:   false,
+			}.Report(http.StatusBadRequest, w)
+			return
+		}
+		q.After = after
+	}
+
+	results, err := c.ListJobs(q)
+	if err != nil {
+		re := RhoError{
+			Code:    CodeListFailure,
+			Message: fmt.Sprintf("Unable to list jobs: %v", err),
+			Hint:    "This is most likely a database problem.",
+			Retry:   true,
+		}
+		re.Report(http.StatusServiceUnavailable, w)
+		return
+	}
+
+	var response struct {
+		Jobs []SubmittedJob `json:"jobs"`
+	}
+	response.Jobs = results
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 // JobKillHandler allows a user to prematurely terminate a running job.

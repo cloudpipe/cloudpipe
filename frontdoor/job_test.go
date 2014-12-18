@@ -26,21 +26,15 @@ func (storage *JobStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
 	storage.Query = query
 
 	j0 := SubmittedJob{
-		Job: Job{
-			Command: `echo "1"`,
-		},
+		Job: Job{Command: `echo "1"`},
 		JID: 11,
 	}
 	j1 := SubmittedJob{
-		Job: Job{
-			Command: `echo "2"`,
-		},
+		Job: Job{Command: `echo "2"`},
 		JID: 22,
 	}
 	j2 := SubmittedJob{
-		Job: Job{
-			Command: `echo "3"`,
-		},
+		Job: Job{Command: `echo "3"`},
 		JID: 33,
 	}
 
@@ -223,17 +217,18 @@ func TestListJobsAll(t *testing.T) {
 	if err := json.Unmarshal(out, &response); err != nil {
 		t.Fatalf("Unable to parse response body as JSON: [%s]", string(out))
 	}
+	t.Logf("Response body:\n%s", out)
 
 	if len(response.Jobs) != 3 {
 		t.Fatalf("Unexpected number of jobs returned: [%d]", len(response.Jobs))
 	}
-	if id0 := response.Jobs[0].JID; id0 != 11 {
-		t.Errorf("Expected first job to have jid 11, had [%d]", id0)
+	if cmd0 := response.Jobs[0].Command; cmd0 != `echo "1"` {
+		t.Errorf(`Expected first job to have command 'echo "1"', had [%s]`, cmd0)
 	}
-	if id1 := response.Jobs[1].JID; id1 != 22 {
-		t.Errorf("Expected first job to have jid 22, had [%d]", id1)
+	if cmd1 := response.Jobs[1].Command; cmd1 != `echo "2"` {
+		t.Errorf(`Expected second job to have command 'echo "2"', had [%s]`, cmd1)
 	}
-	if id2 := response.Jobs[2].JID; id2 != 33 {
-		t.Errorf("Expected first job to have jid 33, had [%d]", id2)
+	if cmd2 := response.Jobs[2].Command; cmd2 != `echo "3"` {
+		t.Errorf(`Expected third job to have command 'echo "3"', had [%s]`, cmd2)
 	}
 }
