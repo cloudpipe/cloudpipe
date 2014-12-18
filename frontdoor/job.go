@@ -170,7 +170,7 @@ func JobHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		JobSubmitHandler(c, w, r)
 	default:
 		RhoError{
-			Code:    "3",
+			Code:    CodeMethodNotSupported,
 			Message: "Method not supported",
 			Hint:    "Use GET or POST against this endpoint.",
 			Retry:   false,

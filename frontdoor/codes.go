@@ -6,6 +6,9 @@ const (
 	// CodeCredentialsIncorrect means auth data on a request was present, but incorrect.
 	CodeCredentialsIncorrect = "AFAIL"
 
+	// CodeMethodNotSupported means a request was made against a resource with an unsupported method.
+	CodeMethodNotSupported = "MINVAL"
+
 	// CodeInvalidJobJSON means a POST body to /jobs was not parseable JSON.
 	CodeInvalidJobJSON = "JPRS"
 	// CodeMissingCommand means a job is missing a "cmd" element.

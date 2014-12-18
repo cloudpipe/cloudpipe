@@ -32,7 +32,7 @@ func TestJobHandlerBadRequest(t *testing.T) {
 	JobHandler(c, w, r)
 
 	hasError(t, w, http.StatusMethodNotAllowed, RhoError{
-		Code:    "3",
+		Code:    CodeMethodNotSupported,
 		Message: "Method not supported",
 		Retry:   false,
 	})
