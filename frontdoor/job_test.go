@@ -232,3 +232,60 @@ func TestListJobsAll(t *testing.T) {
 		t.Errorf(`Expected third job to have command 'echo "3"', had [%s]`, cmd2)
 	}
 }
+
+func jobListQuery(t *testing.T, url string) JobQuery {
+	r, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Fatalf("Unable to create request: %v", err)
+	}
+	r.SetBasicAuth("admin", "12345")
+	w := httptest.NewRecorder()
+	s := &JobStorage{}
+	c := &Context{
+		Settings: Settings{
+			AdminName: "admin",
+			AdminKey:  "12345",
+		},
+		Storage: s,
+	}
+
+	JobHandler(c, w, r)
+
+	return s.Query
+}
+
+func TestListJobsBySingleID(t *testing.T) {
+	q := jobListQuery(t, "https://localhost/api/jobs?jid=123")
+
+	if len(q.JIDs) != 1 {
+		t.Errorf("Expected a single JID, got [%v]", q.JIDs)
+	}
+	if q.JIDs[0] != 123 {
+		t.Errorf("Expected JID to be 123, got [%d]", q.JIDs[0])
+	}
+
+	if q.Limit != 1000 {
+		t.Errorf("Expected limit to default to 1000, got [%d]", q.Limit)
+	}
+}
+
+func TestListJobsByMultipleIDs(t *testing.T) {
+	q := jobListQuery(t, "https://localhost/api/jobs?jid=123&jid=456&jid=789")
+
+	if len(q.JIDs) != 3 {
+		t.Errorf("Expected three JIDs, got [%v]", q.JIDs)
+	}
+	for i, expected := range []uint64{123, 456, 789} {
+		if q.JIDs[i] != expected {
+			t.Errorf("Expected [%d] for element %d, got [%d]", expected, i, q.JIDs[i])
+		}
+	}
+}
+
+func TestListJobsByName(t *testing.T) {
+	t.Fatalf("pending")
+}
+
+func TestListJobsClampLimit(t *testing.T) {
+	t.Fatalf("pending")
+}
