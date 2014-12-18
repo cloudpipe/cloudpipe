@@ -122,7 +122,7 @@ func (j Job) Validate() *RhoError {
 	}
 
 	// ResultType
-	if _, ok := validResultType[j.ResultType]; ok {
+	if _, ok := validResultType[j.ResultType]; !ok {
 		accepted := make([]string, 0, len(validResultType))
 		for tp := range validResultType {
 			accepted = append(accepted, tp)
