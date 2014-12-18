@@ -276,17 +276,12 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := r.ParseForm(); err != nil {
-		log.WithFields(log.Fields{
-			"error":   err,
-			"account": account.Name,
-		}).Error("Unable to parse request parameters.")
-
 		RhoError{
 			Code:    CodeUnableToParseQuery,
 			Message: fmt.Sprintf("Unable to parse query parameters: %v", err),
 			Hint:    "You broke Go's URL parsing somehow! Make URLs that suck less.",
 			Retry:   false,
-		}.Report(http.StatusBadRequest, w)
+		}.Log(account).Report(http.StatusBadRequest, w)
 		return
 	}
 
@@ -300,7 +295,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 					Message: fmt.Sprintf("Unable to parse JID [%s]: %v", rawJID, err),
 					Hint:    "Please only use valid JIDs.",
 					Retry:   false,
-				}.Report(http.StatusBadRequest, w)
+				}.Log(account).Report(http.StatusBadRequest, w)
 				return
 			}
 		}
@@ -320,7 +315,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 				Message: fmt.Sprintf("Unable to parse limit [%s]: %v", rawLimit, err),
 				Hint:    "Please specify a valid integral limit.",
 				Retry:   false,
-			}.Report(http.StatusBadRequest, w)
+			}.Log(account).Report(http.StatusBadRequest, w)
 			return
 		}
 
@@ -333,7 +328,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 				Message: fmt.Sprintf("Invalid negative or zero limit [%d]", limit),
 				Hint:    "Please specify a valid, positive integral limit.",
 				Retry:   false,
-			}.Report(http.StatusBadRequest, w)
+			}.Log(account).Report(http.StatusBadRequest, w)
 			return
 		}
 		q.Limit = int(limit)
@@ -349,7 +344,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 				Message: fmt.Sprintf(`Unable to parse Before bound [%s]: %v`, rawBefore, err),
 				Hint:    "Please specify a valid integral JID as the lower bound.",
 				Retry:   false,
-			}.Report(http.StatusBadRequest, w)
+			}.Log(account).Report(http.StatusBadRequest, w)
 			return
 		}
 		q.Before = before
@@ -362,7 +357,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 				Message: fmt.Sprintf(`Unable to parse After bound [%s]: %v`, rawAfter, err),
 				Hint:    "Please specify a valid integral JID as the upper bound.",
 				Retry:   false,
-			}.Report(http.StatusBadRequest, w)
+			}.Log(account).Report(http.StatusBadRequest, w)
 			return
 		}
 		q.After = after
@@ -376,7 +371,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			Hint:    "This is most likely a database problem.",
 			Retry:   true,
 		}
-		re.Report(http.StatusServiceUnavailable, w)
+		re.Log(account).Report(http.StatusServiceUnavailable, w)
 		return
 	}
 
@@ -384,6 +379,12 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		Jobs []SubmittedJob `json:"jobs"`
 	}
 	response.Jobs = results
+
+	log.WithFields(log.Fields{
+		"query":        q,
+		"result count": len(results),
+		"account":      account.Name,
+	}).Debug("Successful job query.")
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
