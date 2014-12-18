@@ -88,7 +88,7 @@ func StoreTime(t time.Time) StoredTime {
 
 // AsTime converts a StoredTime back to a Go time.Time.
 func (t *StoredTime) AsTime() time.Time {
-	return time.Unix(0, *t).UTC()
+	return time.Unix(0, int64(*t)).UTC()
 }
 
 func (t *StoredTime) String() string {
@@ -103,6 +103,6 @@ func (t *StoredTime) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON decodes a UTC timestamp string into a time.
 func (t *StoredTime) UnmarshalJSON(input []byte) error {
 	parsed, err := time.Parse(quotedFormat, string(input))
-	*t = JSONTime(parsed)
+	*t = StoredTime(parsed.UTC().UnixNano())
 	return err
 }
