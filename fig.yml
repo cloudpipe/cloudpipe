@@ -6,6 +6,7 @@ frontdoor:
   environment:
     RHO_ADMINNAME: admin
     RHO_ADMINKEY: 12345
+    RHO_LOGLEVEL: debug
   ports:
   - "8000:8000"
 mongo:
