@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
@@ -20,6 +22,8 @@ type Settings struct {
 	MongoURL  string
 	AdminName string
 	AdminKey  string
+	Web       bool
+	Runner    bool
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -81,6 +85,15 @@ func (c *Context) Load() error {
 
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {
 		return err
+	}
+
+	// If neither web nor runner are explicitly enabled, enable both.
+	if !c.Web && !c.Runner {
+		if os.Getenv("RHO_WEB") != "" && os.Getenv("RHO_RUNNER") != "" {
+			return errors.New("You must enable either RHO_WEB or RHO_RUNNER!")
+		}
+
+		c.Web, c.Runner = true, true
 	}
 
 	return nil
