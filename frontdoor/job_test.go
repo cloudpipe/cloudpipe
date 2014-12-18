@@ -6,7 +6,21 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
+
+// JobStorage is a fake Storage implementation that only provides job-relevant storage methods.
+type JobStorage struct {
+	NullStorage
+
+	Submitted SubmittedJob
+}
+
+func (storage *JobStorage) InsertJob(job SubmittedJob) (uint64, error) {
+	storage.Submitted = job
+
+	return 42, nil
+}
 
 func TestJobHandlerBadRequest(t *testing.T) {
 	r, err := http.NewRequest("PUT", "https://localhost/api/jobs", nil)
@@ -42,11 +56,13 @@ func TestSubmitJob(t *testing.T) {
 	}
 	r.SetBasicAuth("admin", "12345")
 	w := httptest.NewRecorder()
+	s := JobStorage{}
 	c := &Context{
 		Settings: Settings{
 			AdminName: "admin",
 			AdminKey:  "12345",
 		},
+		Storage: &s,
 	}
 
 	JobHandler(c, w, r)
@@ -65,8 +81,26 @@ func TestSubmitJob(t *testing.T) {
 	if len(response.JIDs) != 1 {
 		t.Errorf("Expected one JID, received [%d]", len(response.JIDs))
 	}
-	if response.JIDs[0] != 0 {
-		t.Errorf("Expected to be assigned ID 0, got [%d]", response.JIDs[0])
+	if response.JIDs[0] != 42 {
+		t.Errorf("Expected to be assigned ID 42, got [%d]", response.JIDs[0])
+	}
+
+	if s.Submitted.Account != "admin" {
+		t.Errorf("Expected submitted job to belong to admin, not [%s]", s.Submitted.Account)
+	}
+	if s.Submitted.Status != StatusQueued {
+		t.Errorf("Expected submitted job to be in state queued, not [%s]", s.Submitted.Status)
+	}
+
+	var zero = JSONTime(time.Time{})
+	if s.Submitted.CreatedAt == zero {
+		t.Error("Expected the job's CreatedAt time to be populated.")
+	}
+	if s.Submitted.StartedAt != zero {
+		t.Errorf("Expected the job's StartedAt time to be zero, but was [%s]", s.Submitted.StartedAt)
+	}
+	if s.Submitted.FinishedAt != zero {
+		t.Errorf("Expected the job's FinishedAt time to be zero, but was [%s]", s.Submitted.FinishedAt)
 	}
 }
 

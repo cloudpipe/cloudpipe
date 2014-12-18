@@ -9,13 +9,15 @@ import (
 
 // Context provides shared state among individual route handlers.
 type Context struct {
-	Settings Settings
+	Settings
+	Storage
 }
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
 	Port      int
 	LogLevel  string
+	MongoURL  string
 	AdminName string
 	AdminKey  string
 }
@@ -29,16 +31,32 @@ func NewContext() (*Context, error) {
 		return c, err
 	}
 
-	level, err := log.ParseLevel(c.Settings.LogLevel)
+	// Summarize the loaded settings.
+
+	log.WithFields(log.Fields{
+		"port":          c.Port,
+		"logging level": c.LogLevel,
+		"mongo URL":     c.MongoURL,
+		"admin account": c.AdminName,
+	}).Info("Initializing with loaded settings.")
+
+	// Configure the logging level.
+
+	level, err := log.ParseLevel(c.LogLevel)
 	if err != nil {
 		return c, err
 	}
 	log.SetLevel(level)
 
-	log.WithFields(log.Fields{
-		"port":          c.Settings.Port,
-		"logging level": c.Settings.LogLevel,
-	}).Info("Initializing with loaded settings.")
+	// Connect to MongoDB.
+
+	c.Storage, err = NewMongoStorage(c)
+	if err != nil {
+		return c, err
+	}
+	if err := c.Storage.Bootstrap(); err != nil {
+		return c, err
+	}
 
 	return c, nil
 }
@@ -49,15 +67,19 @@ func (c *Context) Load() error {
 		return err
 	}
 
-	if c.Settings.Port == 0 {
-		c.Settings.Port = 8000
+	if c.Port == 0 {
+		c.Port = 8000
 	}
 
-	if c.Settings.LogLevel == "" {
-		c.Settings.LogLevel = "info"
+	if c.LogLevel == "" {
+		c.LogLevel = "info"
 	}
 
-	if _, err := log.ParseLevel(c.Settings.LogLevel); err != nil {
+	if c.MongoURL == "" {
+		c.MongoURL = "mongo"
+	}
+
+	if _, err := log.ParseLevel(c.LogLevel); err != nil {
 		return err
 	}
 
@@ -66,5 +88,5 @@ func (c *Context) Load() error {
 
 // ListenAddr generates an address to bind the net/http server to based on the current settings.
 func (c *Context) ListenAddr() string {
-	return fmt.Sprintf(":%d", c.Settings.Port)
+	return fmt.Sprintf(":%d", c.Port)
 }

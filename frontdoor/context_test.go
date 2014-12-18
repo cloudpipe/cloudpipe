@@ -10,6 +10,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	os.Setenv("RHO_PORT", "1234")
 	os.Setenv("RHO_LOGLEVEL", "debug")
+	os.Setenv("RHO_MONGOURL", "server.example.com")
 	os.Setenv("RHO_ADMINNAME", "fake")
 	os.Setenv("RHO_ADMINKEY", "12345")
 
@@ -18,19 +19,23 @@ func TestLoadFromEnvironment(t *testing.T) {
 	}
 
 	if c.Settings.Port != 1234 {
-		t.Errorf("Unexpected port: %d", c.Settings.Port)
+		t.Errorf("Unexpected port: [%d]", c.Settings.Port)
 	}
 
 	if c.Settings.LogLevel != "debug" {
-		t.Errorf("Unexpected log level: %s", c.Settings.LogLevel)
+		t.Errorf("Unexpected log level: [%s]", c.Settings.LogLevel)
+	}
+
+	if c.Settings.MongoURL != "server.example.com" {
+		t.Errorf("Unexpected MongoDB URL: [%s]", c.Settings.MongoURL)
 	}
 
 	if c.Settings.AdminName != "fake" {
-		t.Errorf("Unexpected administrator name: %s", c.Settings.AdminName)
+		t.Errorf("Unexpected administrator name: [%s]", c.Settings.AdminName)
 	}
 
 	if c.Settings.AdminKey != "12345" {
-		t.Errorf("Unexpected administrator API key: %s", c.Settings.AdminKey)
+		t.Errorf("Unexpected administrator API key: [%s]", c.Settings.AdminKey)
 	}
 }
 
@@ -39,6 +44,7 @@ func TestDefaultValues(t *testing.T) {
 
 	os.Setenv("RHO_PORT", "")
 	os.Setenv("RHO_LOGLEVEL", "")
+	os.Setenv("RHO_MONGOURL", "")
 	os.Setenv("RHO_ADMINNAME", "")
 	os.Setenv("RHO_ADMINKEY", "")
 
@@ -47,11 +53,15 @@ func TestDefaultValues(t *testing.T) {
 	}
 
 	if c.Settings.Port != 8000 {
-		t.Errorf("Unexpected port: %d", c.Settings.Port)
+		t.Errorf("Unexpected port: [%d]", c.Settings.Port)
 	}
 
 	if c.Settings.LogLevel != "info" {
-		t.Errorf("Unexpected logging level: %s", c.Settings.LogLevel)
+		t.Errorf("Unexpected logging level: [%s]", c.Settings.LogLevel)
+	}
+
+	if c.Settings.MongoURL != "mongo" {
+		t.Errorf("Unexpected MongoDB connection URL: [%s]", c.Settings.MongoURL)
 	}
 }
 
