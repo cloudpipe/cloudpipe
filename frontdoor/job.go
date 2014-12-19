@@ -162,6 +162,18 @@ type SubmittedJob struct {
 	Account string `json:"-" bson:"account"`
 }
 
+// ContainerName derives a name for the Docker container used to execute this job.
+func (j SubmittedJob) ContainerName() string {
+	var nameFragment string
+	if j.Name != nil {
+		nameFragment = *j.Name
+	} else {
+		nameFragment = "unnamed"
+	}
+
+	return fmt.Sprintf("job_%d_%s", j.JID, nameFragment)
+}
+
 // JobHandler dispatches API calls to /job based on request type.
 func JobHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	switch r.Method {

@@ -313,3 +313,19 @@ func TestListJobsMaximumLimit(t *testing.T) {
 		t.Errorf("Expected handler to clamp limit to 9999, but was %d", q.Limit)
 	}
 }
+
+func TestSubmittedJobContainerName(t *testing.T) {
+	name := "wat"
+	explicitName := SubmittedJob{
+		Job: Job{Name: &name},
+		JID: 1234,
+	}
+	if containerName := explicitName.ContainerName(); containerName != "job_1234_wat" {
+		t.Errorf("Expected explicit name to be [job_1234_wat], was [%s]", containerName)
+	}
+
+	anonymous := SubmittedJob{JID: 4321}
+	if containerName := anonymous.ContainerName(); containerName != "job_4321_unnamed" {
+		t.Errorf("Expected anonymous name to be [job_4321_unnamed], was [%s]", containerName)
+	}
+}
