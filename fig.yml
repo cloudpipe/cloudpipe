@@ -9,5 +9,7 @@ frontdoor:
     RHO_LOGLEVEL: debug
   ports:
   - "8000:8000"
+  volumes:
+  - "/var/run/docker.sock:/var/run/docker.sock"
 mongo:
   image: mongo:2.8
