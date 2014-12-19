@@ -22,6 +22,7 @@ type Settings struct {
 	MongoURL  string
 	AdminName string
 	AdminKey  string
+	Poll      int
 	Web       bool
 	Runner    bool
 }
@@ -81,6 +82,10 @@ func (c *Context) Load() error {
 
 	if c.MongoURL == "" {
 		c.MongoURL = "mongo"
+	}
+
+	if c.Poll == 0 {
+		c.Poll = 500
 	}
 
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {

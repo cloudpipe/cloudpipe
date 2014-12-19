@@ -13,6 +13,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("RHO_MONGOURL", "server.example.com")
 	os.Setenv("RHO_ADMINNAME", "fake")
 	os.Setenv("RHO_ADMINKEY", "12345")
+	os.Setenv("RHO_POLL", "5000")
 	os.Setenv("RHO_WEB", "true")
 	os.Setenv("RHO_RUNNER", "true")
 
@@ -30,6 +31,10 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	if c.MongoURL != "server.example.com" {
 		t.Errorf("Unexpected MongoDB URL: [%s]", c.MongoURL)
+	}
+
+	if c.Poll != 5000 {
+		t.Errorf("Unexpected polling interval: [%d]", c.Poll)
 	}
 
 	if c.AdminName != "fake" {
@@ -57,6 +62,7 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("RHO_MONGOURL", "")
 	os.Setenv("RHO_ADMINNAME", "")
 	os.Setenv("RHO_ADMINKEY", "")
+	os.Setenv("RHO_POLL", "")
 	os.Setenv("RHO_WEB", "")
 	os.Setenv("RHO_RUNNER", "")
 
@@ -74,6 +80,10 @@ func TestDefaultValues(t *testing.T) {
 
 	if c.MongoURL != "mongo" {
 		t.Errorf("Unexpected MongoDB connection URL: [%s]", c.MongoURL)
+	}
+
+	if c.Poll != 500 {
+		t.Errorf("Unexpected polling interval: [%d]", c.Poll)
 	}
 
 	if !c.Web {
