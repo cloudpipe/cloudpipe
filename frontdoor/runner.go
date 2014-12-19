@@ -42,8 +42,27 @@ func Claim(c *Context) {
 // to the container and consumes stdout and stderr, updating Mongo as it runs. Once completed, it
 // acquires the job's result from its configured source and marks the job as finished.
 func Execute(c *Context, job *SubmittedJob) {
+	job.StartedAt = StoreTime(time.Now())
+	if err := c.UpdateJob(job); err != nil {
+		log.WithFields(log.Fields{
+			"jid":   job.JID,
+			"error": err,
+		}).Error("Unable to update job start timestamp.")
+		return
+	}
+
 	log.WithFields(log.Fields{
 		"jid":     job.JID,
 		"command": job.Command,
 	}).Info("Hey look I'm executing a job!")
+
+	job.FinishedAt = StoreTime(time.Now())
+	job.Status = StatusDone
+	if err := c.UpdateJob(job); err != nil {
+		log.WithFields(log.Fields{
+			"jid":   job.JID,
+			"error": err,
+		}).Error(`Unable to update job status to "done".`)
+		return
+	}
 }
