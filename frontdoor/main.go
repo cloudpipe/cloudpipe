@@ -18,19 +18,28 @@ func main() {
 		return
 	}
 
+	log.Info("Commence primary ignition.")
+
+	if c.Runner {
+		if c.Web {
+			log.Info("Launching job runner as a goroutine.")
+			go Runner(c)
+		} else {
+			log.Info("Launching job runner in the foreground.")
+			Runner(c)
+		}
+	}
+
 	if c.Web {
 		http.HandleFunc("/api/job", BindContext(c, JobHandler))
 		http.HandleFunc("/api/job/kill", BindContext(c, JobKillHandler))
 		http.HandleFunc("/api/job/kill_all", BindContext(c, JobKillAllHandler))
 		http.HandleFunc("/api/job/queue_stats", BindContext(c, JobQueueStatsHandler))
 
-		log.Info("Commence primary ignition.")
+		log.WithFields(log.Fields{
+			"address": c.ListenAddr(),
+		}).Info("Web API listening.")
 		http.ListenAndServe(c.ListenAddr(), nil)
-	}
-
-	if c.Runner {
-		log.Info("Launching job runner.")
-		go Runner(c)
 	}
 }
 
