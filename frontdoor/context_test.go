@@ -15,6 +15,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("RHO_ADMINKEY", "12345")
 	os.Setenv("RHO_POLL", "5000")
 	os.Setenv("RHO_IMAGE", "library/hello-world")
+	os.Setenv("RHO_DOCKERHOST", "tcp://1.2.3.4:4567/")
 	os.Setenv("RHO_WEB", "true")
 	os.Setenv("RHO_RUNNER", "true")
 
@@ -36,6 +37,10 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	if c.Poll != 5000 {
 		t.Errorf("Unexpected polling interval: [%d]", c.Poll)
+	}
+
+	if c.DockerHost != "tcp://1.2.3.4:4567/" {
+		t.Errorf("Unexpected docker host: [%s]", c.DockerHost)
 	}
 
 	if c.Image != "library/hello-world" {
@@ -68,6 +73,8 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("RHO_ADMINNAME", "")
 	os.Setenv("RHO_ADMINKEY", "")
 	os.Setenv("RHO_POLL", "")
+	os.Setenv("RHO_DOCKERHOST", "")
+	os.Setenv("DOCKER_HOST", "")
 	os.Setenv("RHO_IMAGE", "")
 	os.Setenv("RHO_WEB", "")
 	os.Setenv("RHO_RUNNER", "")
@@ -90,6 +97,10 @@ func TestDefaultValues(t *testing.T) {
 
 	if c.Poll != 500 {
 		t.Errorf("Unexpected polling interval: [%d]", c.Poll)
+	}
+
+	if c.DockerHost != "unix:///var/run/docker.sock" {
+		t.Errorf("Unexpected docker host: [%s]", c.DockerHost)
 	}
 
 	if c.Image != "library/python:latest" {
@@ -135,6 +146,20 @@ func TestOnlyRunner(t *testing.T) {
 	}
 	if !c.Runner {
 		t.Error("Expected Runner to be enabled.")
+	}
+}
+
+func TestUseDockerHost(t *testing.T) {
+	os.Setenv("RHO_DOCKERHOST", "")
+	os.Setenv("DOCKER_HOST", "tcp://1.2.3.4:4567/")
+
+	c := Context{}
+	if err := c.Load(); err != nil {
+		t.Errorf("Error loading configuration: %v", err)
+	}
+
+	if c.DockerHost != "tcp://1.2.3.4:4567/" {
+		t.Errorf("Unexpected docker host: [%s]", c.DockerHost)
 	}
 }
 

@@ -17,15 +17,16 @@ type Context struct {
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
-	Port      int
-	LogLevel  string
-	MongoURL  string
-	AdminName string
-	AdminKey  string
-	Image     string
-	Poll      int
-	Web       bool
-	Runner    bool
+	Port       int
+	LogLevel   string
+	MongoURL   string
+	AdminName  string
+	AdminKey   string
+	DockerHost string
+	Image      string
+	Poll       int
+	Web        bool
+	Runner     bool
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -87,6 +88,14 @@ func (c *Context) Load() error {
 
 	if c.Poll == 0 {
 		c.Poll = 500
+	}
+
+	if c.DockerHost == "" {
+		if host := os.Getenv("DOCKER_HOST"); host != "" {
+			c.DockerHost = host
+		} else {
+			c.DockerHost = "unix:///var/run/docker.sock"
+		}
 	}
 
 	if c.Image == "" {
