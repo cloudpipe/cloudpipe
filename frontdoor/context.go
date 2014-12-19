@@ -22,6 +22,7 @@ type Settings struct {
 	MongoURL  string
 	AdminName string
 	AdminKey  string
+	Image     string
 	Poll      int
 	Web       bool
 	Runner    bool
@@ -86,6 +87,10 @@ func (c *Context) Load() error {
 
 	if c.Poll == 0 {
 		c.Poll = 500
+	}
+
+	if c.Image == "" {
+		c.Image = "library/python:latest"
 	}
 
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {

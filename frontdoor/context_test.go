@@ -14,6 +14,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("RHO_ADMINNAME", "fake")
 	os.Setenv("RHO_ADMINKEY", "12345")
 	os.Setenv("RHO_POLL", "5000")
+	os.Setenv("RHO_IMAGE", "library/hello-world")
 	os.Setenv("RHO_WEB", "true")
 	os.Setenv("RHO_RUNNER", "true")
 
@@ -35,6 +36,10 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	if c.Poll != 5000 {
 		t.Errorf("Unexpected polling interval: [%d]", c.Poll)
+	}
+
+	if c.Image != "library/hello-world" {
+		t.Errorf("Unexpected image: [%s]", c.Image)
 	}
 
 	if c.AdminName != "fake" {
@@ -63,6 +68,7 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("RHO_ADMINNAME", "")
 	os.Setenv("RHO_ADMINKEY", "")
 	os.Setenv("RHO_POLL", "")
+	os.Setenv("RHO_IMAGE", "")
 	os.Setenv("RHO_WEB", "")
 	os.Setenv("RHO_RUNNER", "")
 
@@ -84,6 +90,10 @@ func TestDefaultValues(t *testing.T) {
 
 	if c.Poll != 500 {
 		t.Errorf("Unexpected polling interval: [%d]", c.Poll)
+	}
+
+	if c.Image != "library/python:latest" {
+		t.Errorf("Unexpected default image: [%s]", c.Image)
 	}
 
 	if !c.Web {
