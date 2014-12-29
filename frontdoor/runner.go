@@ -5,7 +5,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	docker "github.com/fsouza/go-dockerclient"
+	docker "github.com/smashwilson/go-dockerclient"
 )
 
 // OutputCollector is an io.Writer that accumulates output from a specified stream in an attached
