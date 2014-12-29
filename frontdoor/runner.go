@@ -102,7 +102,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		Name: job.ContainerName(),
 		Config: &docker.Config{
 			Image:     c.Image,
-			Cmd:       strings.Split(job.Command, " "),
+			Cmd:       []string{"sh", "-c", job.Command},
 			OpenStdin: true,
 		},
 	})
