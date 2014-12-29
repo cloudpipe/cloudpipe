@@ -2,12 +2,46 @@ package main
 
 import (
 	"bytes"
-	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	docker "github.com/fsouza/go-dockerclient"
 )
+
+// OutputCollector is an io.Writer that accumulates output from a specified stream in an attached
+// Docker container and appends it to the appropriate field within a SubmittedJob.
+type OutputCollector struct {
+	context  *Context
+	job      *SubmittedJob
+	isStdout bool
+}
+
+// Write appends bytes to the selected stream and updates the SubmittedJob.
+func (c OutputCollector) Write(p []byte) (int, error) {
+	var stream string
+	if c.isStdout {
+		stream = "stdout"
+	} else {
+		stream = "stderr"
+	}
+	log.WithFields(log.Fields{
+		"length": len(p),
+		"bytes":  string(p),
+		"stream": stream,
+	}).Debug("Received output from a job")
+
+	if c.isStdout {
+		c.job.Stdout += string(p)
+	} else {
+		c.job.Stderr += string(p)
+	}
+
+	if err := c.context.UpdateJob(c.job); err != nil {
+		return 0, err
+	}
+
+	return len(p), nil
+}
 
 // Runner is the main entry point for the job runner goroutine.
 func Runner(c *Context) {
@@ -107,17 +141,24 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 
 	// Prepare the input and output streams.
 	stdin := bytes.NewReader(job.Stdin)
-	var stdout, stderr bytes.Buffer
-
-	complete := make(chan struct{})
+	stdout := OutputCollector{
+		context:  c,
+		job:      job,
+		isStdout: true,
+	}
+	stderr := OutputCollector{
+		context:  c,
+		job:      job,
+		isStdout: false,
+	}
 
 	log.Debug("About to attach.")
 	err = client.AttachToContainer(docker.AttachToContainerOptions{
 		Container:    container.ID,
-		InputStream:  stdin,
-		OutputStream: &stdout,
-		ErrorStream:  &stderr,
 		Stream:       true,
+		InputStream:  stdin,
+		OutputStream: stdout,
+		ErrorStream:  stderr,
 		Stdin:        true,
 		Stdout:       true,
 		Stderr:       true,
@@ -132,8 +173,6 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		}).Error("Unable to attach to the job's container.")
 		return
 	}
-	log.Debug("Waiting for attachment to succeed.")
-
 	log.WithFields(log.Fields{
 		"jid":            job.JID,
 		"account":        job.Account,
@@ -141,47 +180,8 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		"container name": container.Name,
 	}).Debug("Attached to the job's container.")
 
-	go func() {
-		log.WithFields(log.Fields{"jid": job.JID}).Debug("Polling container I/O.")
-	IOLOOP:
-		for {
-			select {
-			case <-time.After(100 * time.Millisecond):
-				log.WithFields(log.Fields{"jid": job.JID}).Debug("Reading output so far.")
-				nout, nerr := stdout.String(), stderr.String()
-
-				log.WithFields(log.Fields{
-					"jid":  job.JID,
-					"nout": nout,
-					"nerr": nerr,
-				}).Debug("Read bytes from stdout and/or stderr.")
-
-				job.Stdout += nout
-				job.Stderr += nerr
-
-				if len(nout) > 0 || len(nerr) > 0 {
-					if err := c.UpdateJob(job); err != nil {
-						log.WithFields(log.Fields{
-							"jid":            job.JID,
-							"account":        job.Account,
-							"container id":   container.ID,
-							"container name": container.Name,
-							"error":          err,
-						}).Warn("Unable to update the job's stdout and stderr.")
-					}
-				}
-			case <-complete:
-				log.WithFields(log.Fields{"jid": job.JID}).Debug("Complete signal received.")
-				break IOLOOP
-			}
-		}
-		log.WithFields(log.Fields{"jid": job.JID}).Debug("Polling loop complete.")
-	}()
-
 	log.Debug("Waiting for job completion.")
 	status, err := client.WaitContainer(container.ID)
-	log.Debug("Signalling completion.")
-	complete <- struct{}{}
 	if err != nil {
 		log.WithFields(log.Fields{
 			"jid":            job.JID,
