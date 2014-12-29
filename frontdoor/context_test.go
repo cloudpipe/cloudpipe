@@ -14,7 +14,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("RHO_ADMINNAME", "fake")
 	os.Setenv("RHO_ADMINKEY", "12345")
 	os.Setenv("RHO_POLL", "5000")
-	os.Setenv("RHO_IMAGE", "library/hello-world")
+	os.Setenv("RHO_IMAGE", "rgbkrk/inrhocloud")
 	os.Setenv("RHO_DOCKERHOST", "tcp://1.2.3.4:4567/")
 	os.Setenv("RHO_WEB", "true")
 	os.Setenv("RHO_RUNNER", "true")
@@ -43,7 +43,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 		t.Errorf("Unexpected docker host: [%s]", c.DockerHost)
 	}
 
-	if c.Image != "library/hello-world" {
+	if c.Image != "rgbkrk/inrhocloud" {
 		t.Errorf("Unexpected image: [%s]", c.Image)
 	}
 
@@ -103,7 +103,7 @@ func TestDefaultValues(t *testing.T) {
 		t.Errorf("Unexpected docker host: [%s]", c.DockerHost)
 	}
 
-	if c.Image != "library/python:latest" {
+	if c.Image != "rgbkrk/inrhocloud" {
 		t.Errorf("Unexpected default image: [%s]", c.Image)
 	}
 

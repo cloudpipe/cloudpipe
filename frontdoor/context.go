@@ -99,7 +99,7 @@ func (c *Context) Load() error {
 	}
 
 	if c.Image == "" {
-		c.Image = "library/python:latest"
+		c.Image = "rgbkrk/inrhocloud"
 	}
 
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {
