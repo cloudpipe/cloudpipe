@@ -460,7 +460,12 @@ func (c *Client) hijack(method, path string, success chan struct{}, setRawTermin
 		protocol = "tcp"
 		address = c.endpointURL.Host
 	}
-	dial, err := net.Dial(protocol, address)
+	var dial net.Conn
+	if c.TLSConfig == nil {
+		dial, err = net.Dial(protocol, address)
+	} else {
+		dial, err = tls.Dial(protocol, address, c.TLSConfig)
+	}
 	if err != nil {
 		return err
 	}
@@ -489,9 +494,13 @@ func (c *Client) hijack(method, path string, success chan struct{}, setRawTermin
 		if in != nil {
 			_, err = io.Copy(rwc, in)
 		}
-		rwc.(interface {
-			CloseWrite() error
-		}).CloseWrite()
+		// @todo, original would panic when using TLS as
+		// tls.Conn doesn't implement CloseWrite()
+		if _, ok := rwc.(*tls.Conn); !ok {
+			rwc.(interface {
+				CloseWrite() error
+			}).CloseWrite()
+		}
 		errs <- err
 	}()
 	<-exit

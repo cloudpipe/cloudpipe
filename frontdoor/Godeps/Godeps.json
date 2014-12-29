@@ -43,13 +43,13 @@
 			"Rev": "8dfcbf62edb2853176eb3f5cf077dae68f2e85c3"
 		},
 		{
-			"ImportPath": "github.com/fsouza/go-dockerclient",
-			"Rev": "77d44de354d4cb20ad5b03a9e118dc203e59095b"
-		},
-		{
 			"ImportPath": "github.com/kelseyhightower/envconfig",
 			"Comment": "v1.0.0-6-ge904934",
 			"Rev": "e9049346b6aae8e6ad500c5a4519ad029439d660"
+		},
+		{
+			"ImportPath": "github.com/smashwilson/go-dockerclient",
+			"Rev": "71b94ba6f7328eced58b7c21a2166da4d9cc864a"
 		},
 		{
 			"ImportPath": "gopkg.in/mgo.v2",
