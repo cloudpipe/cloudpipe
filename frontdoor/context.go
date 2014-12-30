@@ -1,7 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"os/user"
+	"path"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
@@ -15,11 +19,20 @@ type Context struct {
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
-	Port      int
-	LogLevel  string
-	MongoURL  string
-	AdminName string
-	AdminKey  string
+	Port         int
+	LogLevel     string
+	MongoURL     string
+	AdminName    string
+	AdminKey     string
+	DockerHost   string
+	DockerTLS    bool
+	DockerCACert string
+	DockerCert   string
+	DockerKey    string
+	Image        string
+	Poll         int
+	Web          bool
+	Runner       bool
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -79,8 +92,55 @@ func (c *Context) Load() error {
 		c.MongoURL = "mongo"
 	}
 
+	if c.Poll == 0 {
+		c.Poll = 500
+	}
+
+	if c.DockerHost == "" {
+		if host := os.Getenv("DOCKER_HOST"); host != "" {
+			c.DockerHost = host
+		} else {
+			c.DockerHost = "unix:///var/run/docker.sock"
+		}
+	}
+
+	certRoot := os.Getenv("DOCKER_CERT_PATH")
+	if certRoot == "" {
+		user, err := user.Current()
+		if err != nil {
+			return fmt.Errorf("Unable to read the current OS user: %v", err)
+		}
+
+		certRoot = path.Join(user.HomeDir, ".docker")
+	}
+
+	if c.DockerCACert == "" {
+		c.DockerCACert = path.Join(certRoot, "ca.pem")
+	}
+
+	if c.DockerCert == "" {
+		c.DockerCert = path.Join(certRoot, "cert.pem")
+	}
+
+	if c.DockerKey == "" {
+		c.DockerKey = path.Join(certRoot, "key.pem")
+	}
+
+	if c.Image == "" {
+		c.Image = "rgbkrk/inrhocloud"
+	}
+
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {
 		return err
+	}
+
+	// If neither web nor runner are explicitly enabled, enable both.
+	if !c.Web && !c.Runner {
+		if os.Getenv("RHO_WEB") != "" && os.Getenv("RHO_RUNNER") != "" {
+			return errors.New("You must enable either RHO_WEB or RHO_RUNNER!")
+		}
+
+		c.Web, c.Runner = true, true
 	}
 
 	return nil

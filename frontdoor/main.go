@@ -18,15 +18,29 @@ func main() {
 		return
 	}
 
-	http.HandleFunc("/api/job", BindContext(c, JobHandler))
-	http.HandleFunc("/api/job/kill", BindContext(c, JobKillHandler))
-	http.HandleFunc("/api/job/kill_all", BindContext(c, JobKillAllHandler))
-	http.HandleFunc("/api/job/queue_stats", BindContext(c, JobQueueStatsHandler))
-
 	log.Info("Commence primary ignition.")
-	http.ListenAndServe(c.ListenAddr(), nil)
 
-	fmt.Println("I exist")
+	if c.Runner {
+		if c.Web {
+			log.Info("Launching job runner as a goroutine.")
+			go Runner(c)
+		} else {
+			log.Info("Launching job runner in the foreground.")
+			Runner(c)
+		}
+	}
+
+	if c.Web {
+		http.HandleFunc("/api/job", BindContext(c, JobHandler))
+		http.HandleFunc("/api/job/kill", BindContext(c, JobKillHandler))
+		http.HandleFunc("/api/job/kill_all", BindContext(c, JobKillAllHandler))
+		http.HandleFunc("/api/job/queue_stats", BindContext(c, JobQueueStatsHandler))
+
+		log.WithFields(log.Fields{
+			"address": c.ListenAddr(),
+		}).Info("Web API listening.")
+		http.ListenAndServe(c.ListenAddr(), nil)
+	}
 }
 
 // ContextHandler is an HTTP HandlerFunc that accepts an additional parameter containing the

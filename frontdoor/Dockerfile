@@ -4,7 +4,7 @@ RUN useradd rho && \
   go get github.com/tools/godep && \
   chown -R rho:rho /go
 
-USER rho
+# USER rho
 
 ADD ./Godeps /go/src/github.com/smashwilson/rhocloud/frontdoor/Godeps
 WORKDIR /go/src/github.com/smashwilson/rhocloud/frontdoor/

@@ -14,6 +14,8 @@ type Storage interface {
 
 	InsertJob(SubmittedJob) (uint64, error)
 	ListJobs(JobQuery) ([]SubmittedJob, error)
+	ClaimJob() (*SubmittedJob, error)
+	UpdateJob(*SubmittedJob) error
 }
 
 // JobQuery specifies (all optional) query parameters for fetching jobs.
@@ -166,6 +168,34 @@ func (storage *MongoStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
 	return result, nil
 }
 
+// ClaimJob atomically searches for the oldest pending SubmittedJob, marks it as StatusProcessing,
+// and returns it. nil is returned if no SubmittedJobs are available.
+func (storage *MongoStorage) ClaimJob() (*SubmittedJob, error) {
+	var job SubmittedJob
+	_, err := storage.jobs().Find(bson.M{"status": StatusQueued}).Sort("created_at").Apply(mgo.Change{
+		Update:    bson.M{"$set": bson.M{"status": StatusProcessing}},
+		ReturnNew: true,
+	}, &job)
+
+	if err == mgo.ErrNotFound {
+		// No jobs in the queue.
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &job, nil
+}
+
+// UpdateJob updates the state of a job in the database to match any changes made to the model.
+func (storage *MongoStorage) UpdateJob(job *SubmittedJob) error {
+	var out SubmittedJob
+	_, err := storage.jobs().FindId(job.JID).Apply(mgo.Change{
+		Update: bson.M{"$set": job},
+	}, &out)
+	return err
+}
+
 // NullStorage is a useful embeddable struct that can be used to mock selected storage calls without
 // needing to stub out all of the ones you don't care about.
 type NullStorage struct{}
@@ -186,4 +216,14 @@ func (storage NullStorage) InsertJob(job SubmittedJob) (uint64, error) {
 // ListJobs returns an empty collection.
 func (storage NullStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
 	return []SubmittedJob{}, nil
+}
+
+// ClaimJob always returns nil.
+func (storage NullStorage) ClaimJob() (*SubmittedJob, error) {
+	return nil, nil
+}
+
+// UpdateJob is a no-op.
+func (storage NullStorage) UpdateJob(job *SubmittedJob) error {
+	return nil
 }

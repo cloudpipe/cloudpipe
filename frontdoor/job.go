@@ -148,7 +148,7 @@ type SubmittedJob struct {
 	FinishedAt StoredTime `json:"finished_at,omitempty" bson:"finished_at"`
 
 	Status        string `json:"status" bson:"status"`
-	Result        string `json:"result" bson:"result"`
+	Result        []byte `json:"result" bson:"result"`
 	ReturnCode    string `json:"return_code" bson:"return_code"`
 	Runtime       uint64 `json:"runtime" bson:"runtime"`
 	QueueDelay    uint64 `json:"queue_delay" bson:"queue_delay"`
@@ -160,6 +160,18 @@ type SubmittedJob struct {
 
 	JID     uint64 `json:"jid" bson:"_id"`
 	Account string `json:"-" bson:"account"`
+}
+
+// ContainerName derives a name for the Docker container used to execute this job.
+func (j SubmittedJob) ContainerName() string {
+	var nameFragment string
+	if j.Name != nil {
+		nameFragment = *j.Name
+	} else {
+		nameFragment = "unnamed"
+	}
+
+	return fmt.Sprintf("job_%d_%s", j.JID, nameFragment)
 }
 
 // JobHandler dispatches API calls to /job based on request type.
