@@ -1,8 +1,11 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -106,6 +109,10 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		"account": job.Account,
 	}
 
+	// Logging utility messages.
+	debug := func(message string) {
+		log.WithFields(defaultFields).Debug(message)
+	}
 	reportErr := func(message string, err error) {
 		fs := log.Fields{}
 		for k, v := range defaultFields {
@@ -116,7 +123,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	}
 	checkErr := func(message string, err error) bool {
 		if err == nil {
-			log.WithFields(defaultFields).Debugf("%s: ok", message)
+			debug(fmt.Sprintf("%s: ok", message))
 			return false
 		}
 
@@ -186,9 +193,6 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		return
 	}
 
-	err = client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
-	checkErr("Removed the container", err)
-
 	job.FinishedAt = StoreTime(time.Now())
 	if status == 0 {
 		// Successful termination.
@@ -197,6 +201,52 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		// Something went wrong.
 		job.Status = StatusError
 	}
+
+	// Extract the result from the job.
+	if job.ResultSource == "stdout" {
+		job.Result = []byte(job.Stdout)
+		debug("Acquired job result from stdout: ok")
+	} else if strings.HasPrefix(job.ResultSource, "file:") {
+		resultPath := job.ResultSource[len("file:"):len(job.ResultSource)]
+
+		var resultBuffer bytes.Buffer
+		err = client.CopyFromContainer(docker.CopyFromContainerOptions{
+			Container:    container.ID,
+			Resource:     resultPath,
+			OutputStream: &resultBuffer,
+		})
+		if checkErr(fmt.Sprintf("Acquired the job's result from the file [%s]", resultPath), err) {
+			job.Status = StatusError
+		} else {
+			// CopyFromContainer returns the file contents as a tarball.
+			var content bytes.Buffer
+			r := bytes.NewReader(resultBuffer.Bytes())
+			tr := tar.NewReader(r)
+
+			for {
+				_, err := tr.Next()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					reportErr("Read tar-encoded content: ERROR", err)
+					job.Status = StatusError
+					break
+				}
+
+				if _, err = io.Copy(&content, tr); err != nil {
+					reportErr("Copy decoded content: ERROR", err)
+					job.Status = StatusError
+					break
+				}
+			}
+
+			job.Result = content.Bytes()
+		}
+	}
+
+	err = client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
+	checkErr("Removed the container", err)
 
 	err = c.UpdateJob(job)
 	if checkErr("Updated the job's status", err) {
