@@ -212,6 +212,17 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		return
 	}
 
+	log.Debug("Removing container.")
+	if err := client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID}); err != nil {
+		log.WithFields(log.Fields{
+			"jid":            job.JID,
+			"account":        job.Account,
+			"container id":   container.ID,
+			"container name": container.Name,
+			"error":          err,
+		}).Error("Unable to remove the container.")
+	}
+
 	job.FinishedAt = StoreTime(time.Now())
 	if status == 0 {
 		// Successful termination.
