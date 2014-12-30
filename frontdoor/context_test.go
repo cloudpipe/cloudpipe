@@ -2,6 +2,8 @@ package main
 
 import (
 	"os"
+	"os/user"
+	"path"
 	"testing"
 )
 
@@ -16,6 +18,10 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("RHO_POLL", "5000")
 	os.Setenv("RHO_IMAGE", "rgbkrk/inrhocloud")
 	os.Setenv("RHO_DOCKERHOST", "tcp://1.2.3.4:4567/")
+	os.Setenv("RHO_DOCKERTLS", "true")
+	os.Setenv("RHO_DOCKERCACERT", "/lockbox/ca.pem")
+	os.Setenv("RHO_DOCKERCERT", "/lockbox/cert.pem")
+	os.Setenv("RHO_DOCKERKEY", "/lockbox/key.pem")
 	os.Setenv("RHO_WEB", "true")
 	os.Setenv("RHO_RUNNER", "true")
 
@@ -41,6 +47,22 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	if c.DockerHost != "tcp://1.2.3.4:4567/" {
 		t.Errorf("Unexpected docker host: [%s]", c.DockerHost)
+	}
+
+	if !c.DockerTLS {
+		t.Errorf("Expected docker TLS to be enabled.")
+	}
+
+	if c.DockerCACert != "/lockbox/ca.pem" {
+		t.Errorf("Unexpected docker CA cert: [%s]", c.DockerCACert)
+	}
+
+	if c.DockerCert != "/lockbox/cert.pem" {
+		t.Errorf("Unexpected docker cert: [%s]", c.DockerCert)
+	}
+
+	if c.DockerKey != "/lockbox/key.pem" {
+		t.Errorf("Unexpected docker key: [%s]", c.DockerKey)
 	}
 
 	if c.Image != "rgbkrk/inrhocloud" {
@@ -75,9 +97,21 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("RHO_POLL", "")
 	os.Setenv("RHO_DOCKERHOST", "")
 	os.Setenv("DOCKER_HOST", "")
+	os.Setenv("RHO_DOCKERTLS", "")
+	os.Setenv("RHO_DOCKERCACERT", "")
+	os.Setenv("RHO_DOCKERCERT", "")
+	os.Setenv("RHO_DOCKERKEY", "")
+	os.Setenv("DOCKER_TLS_VERIFY", "")
+	os.Setenv("DOCKER_CERT_PATH", "")
 	os.Setenv("RHO_IMAGE", "")
 	os.Setenv("RHO_WEB", "")
 	os.Setenv("RHO_RUNNER", "")
+
+	u, err := user.Current()
+	if err != nil {
+		t.Errorf("Unable to identify current user: %v", err)
+	}
+	home := u.HomeDir
 
 	if err := c.Load(); err != nil {
 		t.Errorf("Error loading configuration: %v", err)
@@ -101,6 +135,22 @@ func TestDefaultValues(t *testing.T) {
 
 	if c.DockerHost != "unix:///var/run/docker.sock" {
 		t.Errorf("Unexpected docker host: [%s]", c.DockerHost)
+	}
+
+	if c.DockerTLS {
+		t.Errorf("Expected docker TLS to be disabled.")
+	}
+
+	if c.DockerCACert != path.Join(home, ".docker", "ca.pem") {
+		t.Errorf("Unexpected docker CA cert: [%s]", c.DockerCACert)
+	}
+
+	if c.DockerCert != path.Join(home, ".docker", "cert.pem") {
+		t.Errorf("Unexpected docker cert: [%s]", c.DockerCert)
+	}
+
+	if c.DockerKey != path.Join(home, ".docker", "key.pem") {
+		t.Errorf("Unexpected docker key: [%s]", c.DockerKey)
 	}
 
 	if c.Image != "rgbkrk/inrhocloud" {

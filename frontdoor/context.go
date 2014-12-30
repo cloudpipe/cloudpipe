@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/user"
+	"path"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
@@ -17,16 +19,20 @@ type Context struct {
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
-	Port       int
-	LogLevel   string
-	MongoURL   string
-	AdminName  string
-	AdminKey   string
-	DockerHost string
-	Image      string
-	Poll       int
-	Web        bool
-	Runner     bool
+	Port         int
+	LogLevel     string
+	MongoURL     string
+	AdminName    string
+	AdminKey     string
+	DockerHost   string
+	DockerTLS    bool
+	DockerCACert string
+	DockerCert   string
+	DockerKey    string
+	Image        string
+	Poll         int
+	Web          bool
+	Runner       bool
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -96,6 +102,28 @@ func (c *Context) Load() error {
 		} else {
 			c.DockerHost = "unix:///var/run/docker.sock"
 		}
+	}
+
+	certRoot := os.Getenv("DOCKER_CERT_PATH")
+	if certRoot == "" {
+		user, err := user.Current()
+		if err != nil {
+			return fmt.Errorf("Unable to read the current OS user: %v", err)
+		}
+
+		certRoot = path.Join(user.HomeDir, ".docker")
+	}
+
+	if c.DockerCACert == "" {
+		c.DockerCACert = path.Join(certRoot, "ca.pem")
+	}
+
+	if c.DockerCert == "" {
+		c.DockerCert = path.Join(certRoot, "cert.pem")
+	}
+
+	if c.DockerKey == "" {
+		c.DockerKey = path.Join(certRoot, "key.pem")
 	}
 
 	if c.Image == "" {
