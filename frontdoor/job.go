@@ -148,7 +148,7 @@ type SubmittedJob struct {
 	FinishedAt StoredTime `json:"finished_at,omitempty" bson:"finished_at"`
 
 	Status        string `json:"status" bson:"status"`
-	Result        string `json:"result" bson:"result"`
+	Result        []byte `json:"result" bson:"result"`
 	ReturnCode    string `json:"return_code" bson:"return_code"`
 	Runtime       uint64 `json:"runtime" bson:"runtime"`
 	QueueDelay    uint64 `json:"queue_delay" bson:"queue_delay"`
