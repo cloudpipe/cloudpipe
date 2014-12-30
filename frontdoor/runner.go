@@ -45,13 +45,29 @@ func (c OutputCollector) Write(p []byte) (int, error) {
 
 // Runner is the main entry point for the job runner goroutine.
 func Runner(c *Context) {
-	client, err := docker.NewClient(c.DockerHost)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"docker host": c.DockerHost,
-			"error":       err,
-		}).Fatal("Unable to connect to Docker.")
-		return
+	var client *docker.Client
+	var err error
+
+	if c.DockerTLS {
+		client, err = docker.NewTLSClient(c.DockerHost, c.DockerCert, c.DockerKey, c.DockerCACert)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"docker host":    c.DockerHost,
+				"docker cert":    c.DockerCert,
+				"docker key":     c.DockerKey,
+				"docker CA cert": c.DockerCACert,
+			}).Fatal("Unable to connect to Docker with TLS.")
+			return
+		}
+	} else {
+		client, err = docker.NewClient(c.DockerHost)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"docker host": c.DockerHost,
+				"error":       err,
+			}).Fatal("Unable to connect to Docker.")
+			return
+		}
 	}
 
 	for {
