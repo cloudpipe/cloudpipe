@@ -120,6 +120,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 			Image:     c.Image,
 			Cmd:       []string{"/bin/bash", "-c", job.Command},
 			OpenStdin: true,
+			StdinOnce: true,
 		},
 	})
 	if err != nil {
