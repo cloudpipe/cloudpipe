@@ -138,6 +138,49 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		"container name": container.Name,
 	}).Debug("Container created successfully.")
 
+	// Prepare the input and output streams.
+	stdin := bytes.NewReader(job.Stdin)
+	stdout := OutputCollector{
+		context:  c,
+		job:      job,
+		isStdout: true,
+	}
+	stderr := OutputCollector{
+		context:  c,
+		job:      job,
+		isStdout: false,
+	}
+
+	go func() {
+		log.Debug("About to attach.")
+		err = client.AttachToContainer(docker.AttachToContainerOptions{
+			Container:    container.ID,
+			Stream:       true,
+			InputStream:  stdin,
+			OutputStream: stdout,
+			ErrorStream:  stderr,
+			Stdin:        true,
+			Stdout:       true,
+			Stderr:       true,
+		})
+		if err != nil {
+			log.WithFields(log.Fields{
+				"jid":            job.JID,
+				"account":        job.Account,
+				"container id":   container.ID,
+				"container name": container.Name,
+				"error":          err,
+			}).Error("Unable to attach to the job's container.")
+			return
+		}
+		log.WithFields(log.Fields{
+			"jid":            job.JID,
+			"account":        job.Account,
+			"container id":   container.ID,
+			"container name": container.Name,
+		}).Debug("Attached to the job's container.")
+	}()
+
 	// Start the created container.
 	if err := client.StartContainer(container.ID, &docker.HostConfig{}); err != nil {
 		log.WithFields(log.Fields{
@@ -155,47 +198,6 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		"container id":   container.ID,
 		"container name": container.Name,
 	}).Debug("Container started successfully.")
-
-	// Prepare the input and output streams.
-	stdin := bytes.NewReader(job.Stdin)
-	stdout := OutputCollector{
-		context:  c,
-		job:      job,
-		isStdout: true,
-	}
-	stderr := OutputCollector{
-		context:  c,
-		job:      job,
-		isStdout: false,
-	}
-
-	log.Debug("About to attach.")
-	err = client.AttachToContainer(docker.AttachToContainerOptions{
-		Container:    container.ID,
-		Stream:       true,
-		InputStream:  stdin,
-		OutputStream: stdout,
-		ErrorStream:  stderr,
-		Stdin:        true,
-		Stdout:       true,
-		Stderr:       true,
-	})
-	if err != nil {
-		log.WithFields(log.Fields{
-			"jid":            job.JID,
-			"account":        job.Account,
-			"container id":   container.ID,
-			"container name": container.Name,
-			"error":          err,
-		}).Error("Unable to attach to the job's container.")
-		return
-	}
-	log.WithFields(log.Fields{
-		"jid":            job.JID,
-		"account":        job.Account,
-		"container id":   container.ID,
-		"container name": container.Name,
-	}).Debug("Attached to the job's container.")
 
 	log.Debug("Waiting for job completion.")
 	status, err := client.WaitContainer(container.ID)
