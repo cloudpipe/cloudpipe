@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -16,18 +17,20 @@ type OutputCollector struct {
 	isStdout bool
 }
 
+// DescribeStream returns "stdout" or "stderr" to indicate which stream this collector is consuming.
+func (c OutputCollector) DescribeStream() string {
+	if c.isStdout {
+		return "stdout"
+	}
+	return "stderr"
+}
+
 // Write appends bytes to the selected stream and updates the SubmittedJob.
 func (c OutputCollector) Write(p []byte) (int, error) {
-	var stream string
-	if c.isStdout {
-		stream = "stdout"
-	} else {
-		stream = "stderr"
-	}
 	log.WithFields(log.Fields{
 		"length": len(p),
 		"bytes":  string(p),
-		"stream": stream,
+		"stream": c.DescribeStream(),
 	}).Debug("Received output from a job")
 
 	if c.isStdout {
@@ -83,19 +86,13 @@ func Runner(c *Context) {
 func Claim(c *Context, client *docker.Client) {
 	job, err := c.ClaimJob()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-		}).Error("Unable to claim a job.")
+		log.WithFields(log.Fields{"error": err}).Error("Unable to claim a job.")
 		return
 	}
 	if job == nil {
 		// Nothing to claim.
 		return
 	}
-
-	log.WithFields(log.Fields{
-		"jid": job.JID,
-	}).Info("Launching a new job.")
 
 	go Execute(c, client, job)
 }
@@ -104,14 +101,34 @@ func Claim(c *Context, client *docker.Client) {
 // to the container and consumes stdout and stderr, updating Mongo as it runs. Once completed, it
 // acquires the job's result from its configured source and marks the job as finished.
 func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
+	defaultFields := log.Fields{
+		"jid":     job.JID,
+		"account": job.Account,
+	}
+
+	reportErr := func(message string, err error) {
+		fs := log.Fields{}
+		for k, v := range defaultFields {
+			fs[k] = v
+		}
+		fs["err"] = err
+		log.WithFields(fs).Error(message)
+	}
+	checkErr := func(message string, err error) bool {
+		if err == nil {
+			log.WithFields(defaultFields).Debugf("%s: ok", message)
+			return false
+		}
+
+		reportErr(fmt.Sprintf("%s: ERROR", message), err)
+		return true
+	}
+
+	log.WithFields(defaultFields).Info("Launching a job.")
+
 	job.StartedAt = StoreTime(time.Now())
 	if err := c.UpdateJob(job); err != nil {
-		log.WithFields(log.Fields{
-			"jid":     job.JID,
-			"account": job.Account,
-			"error":   err,
-		}).Error("Unable to update the job's start timestamp.")
-		return
+		reportErr("Unable to update the job's start timestamp.", err)
 	}
 
 	container, err := client.CreateContainer(docker.CreateContainerOptions{
@@ -123,20 +140,13 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 			StdinOnce: true,
 		},
 	})
-	if err != nil {
-		log.WithFields(log.Fields{
-			"jid":     job.JID,
-			"account": job.Account,
-			"error":   err,
-		}).Error("Unable to create the job's container.")
+	if checkErr("Created the job's container", err) {
 		return
 	}
-	log.WithFields(log.Fields{
-		"jid":            job.JID,
-		"account":        job.Account,
-		"container id":   container.ID,
-		"container name": container.Name,
-	}).Debug("Container created successfully.")
+
+	// Include container information in this job's logging messages.
+	defaultFields["container id"] = container.ID
+	defaultFields["container name"] = container.Name
 
 	// Prepare the input and output streams.
 	stdin := bytes.NewReader(job.Stdin)
@@ -152,7 +162,6 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	}
 
 	go func() {
-		log.Debug("About to attach.")
 		err = client.AttachToContainer(docker.AttachToContainerOptions{
 			Container:    container.ID,
 			Stream:       true,
@@ -163,65 +172,22 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 			Stdout:       true,
 			Stderr:       true,
 		})
-		if err != nil {
-			log.WithFields(log.Fields{
-				"jid":            job.JID,
-				"account":        job.Account,
-				"container id":   container.ID,
-				"container name": container.Name,
-				"error":          err,
-			}).Error("Unable to attach to the job's container.")
-			return
-		}
-		log.WithFields(log.Fields{
-			"jid":            job.JID,
-			"account":        job.Account,
-			"container id":   container.ID,
-			"container name": container.Name,
-		}).Debug("Attached to the job's container.")
+		checkErr("Attached to the container", err)
 	}()
 
 	// Start the created container.
-	if err := client.StartContainer(container.ID, &docker.HostConfig{}); err != nil {
-		log.WithFields(log.Fields{
-			"jid":            job.JID,
-			"account":        job.Account,
-			"container id":   container.ID,
-			"container name": container.Name,
-			"error":          err,
-		}).Error("Unable to start the job's container.")
+	err = client.StartContainer(container.ID, &docker.HostConfig{})
+	if checkErr("Started the container", err) {
 		return
 	}
-	log.WithFields(log.Fields{
-		"jid":            job.JID,
-		"account":        job.Account,
-		"container id":   container.ID,
-		"container name": container.Name,
-	}).Debug("Container started successfully.")
 
-	log.Debug("Waiting for job completion.")
 	status, err := client.WaitContainer(container.ID)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"jid":            job.JID,
-			"account":        job.Account,
-			"container id":   container.ID,
-			"container name": container.Name,
-			"error":          err,
-		}).Error("Unable to wait for the container to terminate.")
+	if checkErr("Waited for the container to complete", err) {
 		return
 	}
 
-	log.Debug("Removing container.")
-	if err := client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID}); err != nil {
-		log.WithFields(log.Fields{
-			"jid":            job.JID,
-			"account":        job.Account,
-			"container id":   container.ID,
-			"container name": container.Name,
-			"error":          err,
-		}).Error("Unable to remove the container.")
-	}
+	err = client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
+	checkErr("Removed the container", err)
 
 	job.FinishedAt = StoreTime(time.Now())
 	if status == 0 {
@@ -232,15 +198,10 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		job.Status = StatusError
 	}
 
-	if err := c.UpdateJob(job); err != nil {
-		log.WithFields(log.Fields{
-			"jid":   job.JID,
-			"error": err,
-		}).Error("Unable to update job status.")
+	err = c.UpdateJob(job)
+	if checkErr("Updated the job's status", err) {
 		return
 	}
 
-	log.WithFields(log.Fields{
-		"jid": job.JID,
-	}).Info("Job complete.")
+	log.WithFields(log.Fields{"jid": job.JID}).Info("Job complete.")
 }
