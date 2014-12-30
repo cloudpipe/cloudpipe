@@ -96,6 +96,23 @@ func Claim(c *Context, client *docker.Client) {
 		// Nothing to claim.
 		return
 	}
+	if err := job.Validate(); err != nil {
+		fields := log.Fields{
+			"jid":     job.JID,
+			"account": job.Account,
+			"error":   err,
+		}
+
+		log.WithFields(fields).Error("Invalid job in queue.")
+
+		job.Status = StatusError
+		if err := c.UpdateJob(job); err != nil {
+			fields["error"] = err
+			log.WithFields(fields).Error("Unable to update job status.")
+		}
+
+		return
+	}
 
 	go Execute(c, client, job)
 }
