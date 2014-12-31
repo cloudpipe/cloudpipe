@@ -1,16 +1,16 @@
 FROM golang:1.4
 
-RUN useradd rho && \
+RUN useradd pipe && \
   go get github.com/tools/godep && \
-  chown -R rho:rho /go
+  chown -R pipe:pipe /go
 
-# USER rho
+# USER pipe
 
-ADD ./Godeps /go/src/github.com/cloudpipe/cloudpipe/frontdoor/Godeps
-WORKDIR /go/src/github.com/cloudpipe/cloudpipe/frontdoor/
+ADD ./Godeps /go/src/github.com/cloudpipe/cloudpipe/Godeps
+WORKDIR /go/src/github.com/cloudpipe/cloudpipe/
 RUN godep restore
 
-ADD . /go/src/github.com/cloudpipe/cloudpipe/frontdoor/
-RUN go install github.com/cloudpipe/cloudpipe/frontdoor
+ADD . /go/src/github.com/cloudpipe/cloudpipe/
+RUN go install github.com/cloudpipe/cloudpipe
 
 CMD ["/go/bin/frontdoor"]
