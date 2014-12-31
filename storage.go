@@ -16,6 +16,9 @@ type Storage interface {
 	ListJobs(JobQuery) ([]SubmittedJob, error)
 	ClaimJob() (*SubmittedJob, error)
 	UpdateJob(*SubmittedJob) error
+
+	GetAccount(name string) (*Account, error)
+	UpdateAccountUsage(name string, runtime int64) error
 }
 
 // JobQuery specifies (all optional) query parameters for fetching jobs.
@@ -196,6 +199,19 @@ func (storage *MongoStorage) UpdateJob(job *SubmittedJob) error {
 	return err
 }
 
+// Account storage
+
+// GetAccount loads an account by its unique account name.
+func (storage *MongoStorage) GetAccount(name string) (*Account, error) {
+	var out Account
+	return &out, nil
+}
+
+// UpdateAccountUsage updates an account to take a new job into account.
+func (storage *MongoStorage) UpdateAccountUsage(name string, runtime int64) error {
+	return nil
+}
+
 // NullStorage is a useful embeddable struct that can be used to mock selected storage calls without
 // needing to stub out all of the ones you don't care about.
 type NullStorage struct{}
@@ -225,5 +241,15 @@ func (storage NullStorage) ClaimJob() (*SubmittedJob, error) {
 
 // UpdateJob is a no-op.
 func (storage NullStorage) UpdateJob(job *SubmittedJob) error {
+	return nil
+}
+
+// GetAccount returns a fake, zero-initialized Account.
+func (storage NullStorage) GetAccount(name string) (*Account, error) {
+	return &Account{Name: name}, nil
+}
+
+// UpdateAccountUsage is a no-op.
+func (storage NullStorage) UpdateAccountUsage(name string, runtime int64) error {
 	return nil
 }
