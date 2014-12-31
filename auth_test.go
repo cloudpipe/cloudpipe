@@ -7,7 +7,7 @@ import (
 )
 
 func setupAuthRecorder(t *testing.T, username, key string) (*http.Request, *httptest.ResponseRecorder) {
-	r, err := http.NewRequest("GET", "https://localhost/api/jobs", nil)
+	r, err := http.NewRequest("GET", "https://localhost/v1/jobs", nil)
 	if err != nil {
 		t.Fatalf("Unable to create request: %v", err)
 	}

@@ -42,7 +42,7 @@ func (storage *JobStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
 }
 
 func TestJobHandlerBadRequest(t *testing.T) {
-	r, err := http.NewRequest("PUT", "https://localhost/api/jobs", nil)
+	r, err := http.NewRequest("PUT", "https://localhost/v1/jobs", nil)
 	if err != nil {
 		t.Fatalf("Unable to create request: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestSubmitJob(t *testing.T) {
 		}]
 	}
 	`)
-	r, err := http.NewRequest("POST", "https://localhost/api/jobs", body)
+	r, err := http.NewRequest("POST", "https://localhost/v1/jobs", body)
 	if err != nil {
 		t.Fatalf("Unable to create request: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestSubmitJobBadResultSource(t *testing.T) {
 		}]
 	}
 	`)
-	r, err := http.NewRequest("POST", "https://localhost/api/jobs", body)
+	r, err := http.NewRequest("POST", "https://localhost/v1/jobs", body)
 	if err != nil {
 		t.Fatalf("Unable to create request: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestSubmitJobBadResultType(t *testing.T) {
 		}]
 	}
 	`)
-	r, err := http.NewRequest("POST", "https://localhost/api/jobs", body)
+	r, err := http.NewRequest("POST", "https://localhost/v1/jobs", body)
 	if err != nil {
 		t.Fatalf("Unable to create request: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestSubmitJobBadResultType(t *testing.T) {
 }
 
 func TestListJobsAll(t *testing.T) {
-	r, err := http.NewRequest("GET", "https://localhost/api/jobs", nil)
+	r, err := http.NewRequest("GET", "https://localhost/v1/jobs", nil)
 	if err != nil {
 		t.Fatalf("Unable to create request: %v", err)
 	}
@@ -255,7 +255,7 @@ func jobListQuery(t *testing.T, url string) JobQuery {
 }
 
 func TestListJobsBySingleID(t *testing.T) {
-	q := jobListQuery(t, "https://localhost/api/jobs?jid=123")
+	q := jobListQuery(t, "https://localhost/v1/jobs?jid=123")
 
 	if len(q.JIDs) != 1 {
 		t.Errorf("Expected a single JID, got [%v]", q.JIDs)
@@ -270,7 +270,7 @@ func TestListJobsBySingleID(t *testing.T) {
 }
 
 func TestListJobsByMultipleIDs(t *testing.T) {
-	q := jobListQuery(t, "https://localhost/api/jobs?jid=123&jid=456&jid=789")
+	q := jobListQuery(t, "https://localhost/v1/jobs?jid=123&jid=456&jid=789")
 
 	if len(q.JIDs) != 3 {
 		t.Errorf("Expected three JIDs, got [%v]", q.JIDs)
@@ -283,7 +283,7 @@ func TestListJobsByMultipleIDs(t *testing.T) {
 }
 
 func TestListJobsBySingleName(t *testing.T) {
-	q := jobListQuery(t, "https://localhost/api/jobs?name=foo")
+	q := jobListQuery(t, "https://localhost/v1/jobs?name=foo")
 
 	if len(q.Names) != 1 {
 		t.Errorf("Expected a single name, got [%v]", q.Names)
@@ -294,7 +294,7 @@ func TestListJobsBySingleName(t *testing.T) {
 }
 
 func TestListJobsByMultipleNames(t *testing.T) {
-	q := jobListQuery(t, "https://localhost/api/jobs?name=foo&name=bar")
+	q := jobListQuery(t, "https://localhost/v1/jobs?name=foo&name=bar")
 
 	if len(q.Names) != 2 {
 		t.Errorf("Expected two names, got [%v]", q.Names)
@@ -307,7 +307,7 @@ func TestListJobsByMultipleNames(t *testing.T) {
 }
 
 func TestListJobsMaximumLimit(t *testing.T) {
-	q := jobListQuery(t, "https://localhost/api/jobs?name=foo&limit=99999999")
+	q := jobListQuery(t, "https://localhost/v1/jobs?name=foo&limit=99999999")
 
 	if q.Limit != 9999 {
 		t.Errorf("Expected handler to clamp limit to 9999, but was %d", q.Limit)
