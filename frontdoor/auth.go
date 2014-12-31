@@ -23,7 +23,7 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 		err := &RhoError{
 			Code:    CodeCredentialsMissing,
 			Message: "You must authenticate.",
-			Hint:    "Try using multivac.config.set_key(api_key='username', api_secret_key='API key', api_url='') before calling other multivac methods.",
+			Hint:    "Try using multyvac.config.set_key(api_key='username', api_secret_key='API key', api_url='') before calling other multyvac methods.",
 			Retry:   false,
 		}
 		err.Report(http.StatusUnauthorized, w)
@@ -47,7 +47,7 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 	err := &RhoError{
 		Code:    CodeCredentialsIncorrect,
 		Message: fmt.Sprintf("Unable to authenticate account [%s]", accountName),
-		Hint:    "Double-check the account name and API key you're providing to multivac.config.set_key().",
+		Hint:    "Double-check the account name and API key you're providing to multyvac.config.set_key().",
 		Retry:   false,
 	}
 	err.Report(http.StatusUnauthorized, w)

@@ -7,7 +7,7 @@ Compute on demand in Docker containers.
 
 Rhocloud is managed by the following components:
 
- * The **frontdoor** is a web application that implements a Multivacs-compatible API.
+ * The **frontdoor** is a web application that implements a Multyvac-compatible API.
 
 ## Getting Started
 
