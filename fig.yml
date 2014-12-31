@@ -1,6 +1,6 @@
 ---
-frontdoor:
-  build: frontdoor/
+cloudpipe:
+  build: .
   links:
   - mongo
   environment:
