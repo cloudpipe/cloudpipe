@@ -144,6 +144,7 @@ func TestSubmitJobBadResultSource(t *testing.T) {
 			AdminName: "admin",
 			AdminKey:  "12345",
 		},
+		Storage: &JobStorage{},
 	}
 
 	JobHandler(c, w, r)
@@ -177,6 +178,7 @@ func TestSubmitJobBadResultType(t *testing.T) {
 			AdminName: "admin",
 			AdminKey:  "12345",
 		},
+		Storage: &JobStorage{},
 	}
 
 	JobHandler(c, w, r)

@@ -20,7 +20,9 @@ func setupAuthRecorder(t *testing.T, username, key string) (*http.Request, *http
 
 func TestAuthenticateMissingCredentials(t *testing.T) {
 	r, w := setupAuthRecorder(t, "", "")
-	c := &Context{}
+	c := &Context{
+		Storage: NullStorage{},
+	}
 
 	_, err := Authenticate(c, w, r)
 	if err == nil {
@@ -41,6 +43,7 @@ func TestAuthenticateAdminCredentials(t *testing.T) {
 			AdminName: "admin",
 			AdminKey:  "12345edcba",
 		},
+		Storage: NullStorage{},
 	}
 
 	a, err := Authenticate(c, w, r)
@@ -58,7 +61,9 @@ func TestAuthenticateAdminCredentials(t *testing.T) {
 
 func TestAuthenticateUnknownAccount(t *testing.T) {
 	r, w := setupAuthRecorder(t, "wrong", "1234512345")
-	c := &Context{}
+	c := &Context{
+		Storage: NullStorage{},
+	}
 
 	_, err := Authenticate(c, w, r)
 	if err == nil {
