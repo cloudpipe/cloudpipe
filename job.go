@@ -150,9 +150,9 @@ type SubmittedJob struct {
 	Status        string `json:"status" bson:"status"`
 	Result        []byte `json:"result" bson:"result"`
 	ReturnCode    string `json:"return_code" bson:"return_code"`
-	Runtime       uint64 `json:"runtime" bson:"runtime"`
-	QueueDelay    uint64 `json:"queue_delay" bson:"queue_delay"`
-	OverheadDelay uint64 `json:"overhead_delay" bson:"overhead_delay"`
+	Runtime       int64  `json:"runtime" bson:"runtime"`
+	QueueDelay    int64  `json:"queue_delay" bson:"queue_delay"`
+	OverheadDelay int64  `json:"overhead_delay" bson:"overhead_delay"`
 	Stderr        string `json:"stderr" bson:"stderr"`
 	Stdout        string `json:"stdout" bson:"stdout"`
 

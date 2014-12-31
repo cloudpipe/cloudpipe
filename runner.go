@@ -160,6 +160,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	log.WithFields(defaultFields).Info("Launching a job.")
 
 	job.StartedAt = StoreTime(time.Now())
+	job.QueueDelay = job.StartedAt.AsTime().Sub(job.CreatedAt.AsTime()).Nanoseconds()
 	updateJob("start timestamp")
 
 	container, err := client.CreateContainer(docker.CreateContainerOptions{
@@ -216,6 +217,11 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		return
 	}
 
+	// Measure the container-launch overhead here.
+	overhead := time.Now()
+	job.OverheadDelay = overhead.Sub(job.StartedAt.AsTime()).Nanoseconds()
+	updateJob("overhead delay")
+
 	status, err := client.WaitContainer(container.ID)
 	if checkErr("Waited for the container to complete", err) {
 		job.Status = StatusError
@@ -224,6 +230,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	}
 
 	job.FinishedAt = StoreTime(time.Now())
+	job.Runtime = job.FinishedAt.AsTime().Sub(overhead).Nanoseconds()
 	if status == 0 {
 		// Successful termination.
 		job.Status = StatusDone
