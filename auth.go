@@ -42,10 +42,19 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 				"account": accountName,
 			}).Debug("Administrator authenticated.")
 
-			return &Account{
-				Name:  accountName,
-				Admin: true,
-			}, nil
+			account, err := c.GetAccount(accountName)
+			if err != nil {
+				return nil, err
+			}
+
+			if !account.Admin {
+				if err := c.UpdateAccountAdmin(accountName, true); err != nil {
+					return nil, err
+				}
+				account.Admin = true
+			}
+
+			return account, nil
 		}
 	}
 
