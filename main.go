@@ -31,10 +31,11 @@ func main() {
 	}
 
 	if c.Web {
-		http.HandleFunc("/api/job", BindContext(c, JobHandler))
-		http.HandleFunc("/api/job/kill", BindContext(c, JobKillHandler))
-		http.HandleFunc("/api/job/kill_all", BindContext(c, JobKillAllHandler))
-		http.HandleFunc("/api/job/queue_stats", BindContext(c, JobQueueStatsHandler))
+		// v1 routes
+		http.HandleFunc("/v1/job", BindContext(c, JobHandler))
+		http.HandleFunc("/v1/job/kill", BindContext(c, JobKillHandler))
+		http.HandleFunc("/v1/job/kill_all", BindContext(c, JobKillAllHandler))
+		http.HandleFunc("/v1/job/queue_stats", BindContext(c, JobQueueStatsHandler))
 
 		log.WithFields(log.Fields{
 			"address": c.ListenAddr(),
