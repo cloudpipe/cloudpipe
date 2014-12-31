@@ -160,6 +160,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	log.WithFields(defaultFields).Info("Launching a job.")
 
 	job.StartedAt = StoreTime(time.Now())
+	job.QueueDelay = job.StartedAt.AsTime().Sub(job.CreatedAt.AsTime()).Nanoseconds()
 	updateJob("start timestamp")
 
 	container, err := client.CreateContainer(docker.CreateContainerOptions{
@@ -216,6 +217,11 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		return
 	}
 
+	// Measure the container-launch overhead here.
+	overhead := time.Now()
+	job.OverheadDelay = overhead.Sub(job.StartedAt.AsTime()).Nanoseconds()
+	updateJob("overhead delay")
+
 	status, err := client.WaitContainer(container.ID)
 	if checkErr("Waited for the container to complete", err) {
 		job.Status = StatusError
@@ -224,6 +230,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	}
 
 	job.FinishedAt = StoreTime(time.Now())
+	job.Runtime = job.FinishedAt.AsTime().Sub(overhead).Nanoseconds()
 	if status == 0 {
 		// Successful termination.
 		job.Status = StatusDone
@@ -278,6 +285,19 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	err = client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
 	checkErr("Removed the container", err)
 
+	err = c.UpdateAccountUsage(job.Account, job.Runtime)
+	if err != nil {
+		reportErr("Update account usage: ERROR", err)
+		return
+	}
 	updateJob("status and final result")
-	log.WithFields(log.Fields{"jid": job.JID}).Info("Job complete.")
+
+	log.WithFields(log.Fields{
+		"jid":      job.JID,
+		"account":  job.Account,
+		"status":   job.Status,
+		"runtime":  job.Runtime,
+		"overhead": job.OverheadDelay,
+		"queue":    job.QueueDelay,
+	}).Info("Job complete.")
 }
