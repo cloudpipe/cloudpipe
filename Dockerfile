@@ -13,4 +13,4 @@ RUN godep restore
 ADD . /go/src/github.com/cloudpipe/cloudpipe/
 RUN go install github.com/cloudpipe/cloudpipe
 
-CMD ["/go/bin/frontdoor"]
+CMD ["/go/bin/cloudpipe"]
