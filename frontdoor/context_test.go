@@ -16,7 +16,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("RHO_ADMINNAME", "fake")
 	os.Setenv("RHO_ADMINKEY", "12345")
 	os.Setenv("RHO_POLL", "5000")
-	os.Setenv("RHO_IMAGE", "rgbkrk/inrhocloud")
+	os.Setenv("RHO_IMAGE", "cloudpipe/runner-py2")
 	os.Setenv("RHO_DOCKERHOST", "tcp://1.2.3.4:4567/")
 	os.Setenv("RHO_DOCKERTLS", "true")
 	os.Setenv("RHO_DOCKERCACERT", "/lockbox/ca.pem")
@@ -65,7 +65,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 		t.Errorf("Unexpected docker key: [%s]", c.DockerKey)
 	}
 
-	if c.Image != "rgbkrk/inrhocloud" {
+	if c.Image != "cloudpipe/runner-py2" {
 		t.Errorf("Unexpected image: [%s]", c.Image)
 	}
 
@@ -153,7 +153,7 @@ func TestDefaultValues(t *testing.T) {
 		t.Errorf("Unexpected docker key: [%s]", c.DockerKey)
 	}
 
-	if c.Image != "rgbkrk/inrhocloud" {
+	if c.Image != "cloudpipe/runner-py2" {
 		t.Errorf("Unexpected default image: [%s]", c.Image)
 	}
 
