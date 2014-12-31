@@ -285,6 +285,12 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	err = client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
 	checkErr("Removed the container", err)
 
+	err = c.UpdateAccountUsage(job.Account, job.Runtime)
+	if err != nil {
+		reportErr("Update account usage: ERROR", err)
+		return
+	}
 	updateJob("status and final result")
+
 	log.WithFields(log.Fields{"jid": job.JID}).Info("Job complete.")
 }
