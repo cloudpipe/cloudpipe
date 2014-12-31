@@ -6,11 +6,11 @@ RUN useradd rho && \
 
 # USER rho
 
-ADD ./Godeps /go/src/github.com/smashwilson/rhocloud/frontdoor/Godeps
-WORKDIR /go/src/github.com/smashwilson/rhocloud/frontdoor/
+ADD ./Godeps /go/src/github.com/cloudpipe/cloudpipe/frontdoor/Godeps
+WORKDIR /go/src/github.com/cloudpipe/cloudpipe/frontdoor/
 RUN godep restore
 
-ADD . /go/src/github.com/smashwilson/rhocloud/frontdoor/
-RUN go install github.com/smashwilson/rhocloud/frontdoor
+ADD . /go/src/github.com/cloudpipe/cloudpipe/frontdoor/
+RUN go install github.com/cloudpipe/cloudpipe/frontdoor
 
 CMD ["/go/bin/frontdoor"]
