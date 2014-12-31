@@ -9,9 +9,15 @@ import (
 
 // Account represents a user of the cluster.
 type Account struct {
-	Name   string
-	APIKey string
-	Admin  bool
+	Name  string `bson:"name"`
+	Admin bool   `bson:"admin"`
+
+	// TotalRuntime tracks the cumulative runtime of all jobs submitted on behalf of this account, in
+	// nanoseconds.
+	TotalRuntime int64 `bson:"total_runtime"`
+
+	// TotalJobs tracks the number of jobs submitted on behalf of this account.
+	TotalJobs int64 `bson:"total_jobs"`
 }
 
 // Authenticate reads authentication information from HTTP basic auth and attempts to locate a
@@ -37,9 +43,8 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 			}).Debug("Administrator authenticated.")
 
 			return &Account{
-				Name:   accountName,
-				APIKey: apiKey,
-				Admin:  true,
+				Name:  accountName,
+				Admin: true,
 			}, nil
 		}
 	}

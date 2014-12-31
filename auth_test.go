@@ -51,9 +51,6 @@ func TestAuthenticateAdminCredentials(t *testing.T) {
 	if a.Name != "admin" {
 		t.Errorf("Unexpected account name: [%s]", a.Name)
 	}
-	if a.APIKey != "12345edcba" {
-		t.Errorf("Unexpected API key: [%s]", a.APIKey)
-	}
 	if !a.Admin {
 		t.Error("Expected account to be an administrator")
 	}
