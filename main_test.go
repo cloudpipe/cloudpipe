@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func hasError(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, expectedErr RhoError) {
+func hasError(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, expectedErr APIError) {
 	if w.Code != expectedStatus {
 		t.Errorf("Unexpected HTTP status: wanted [%d], got [%d]", expectedStatus, w.Code)
 	}
@@ -15,7 +15,7 @@ func hasError(t *testing.T, w *httptest.ResponseRecorder, expectedStatus int, ex
 	}
 
 	var e struct {
-		Error RhoError
+		Error APIError
 	}
 	body := w.Body.Bytes()
 	if err := json.Unmarshal(body, &e); err != nil {

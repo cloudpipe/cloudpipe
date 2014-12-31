@@ -27,7 +27,7 @@ func TestAuthenticateMissingCredentials(t *testing.T) {
 		t.Error("Expected Authenticate to return an error without authentication provided.")
 	}
 
-	hasError(t, w, http.StatusUnauthorized, RhoError{
+	hasError(t, w, http.StatusUnauthorized, APIError{
 		Code:    CodeCredentialsMissing,
 		Message: "You must authenticate.",
 		Retry:   false,
@@ -68,7 +68,7 @@ func TestAuthenticateUnknownAccount(t *testing.T) {
 		t.Error("Expected Authenticate to return an error with unrecognized credentials.")
 	}
 
-	hasError(t, w, http.StatusUnauthorized, RhoError{
+	hasError(t, w, http.StatusUnauthorized, APIError{
 		Code:    CodeCredentialsIncorrect,
 		Message: "Unable to authenticate account [wrong]",
 		Retry:   false,
