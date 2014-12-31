@@ -11,7 +11,7 @@ fig run --rm cloudpipe go test github.com/cloudpipe/cloudpipe/...
 STATUS=$?
 
 if [ "${STATUS}" != "0" ]; then
-  echo "!! frontdoor tests are failing"
+  echo "!! cloudpipe tests are failing"
 else
-  echo "<< frontdoor tests passed"
+  echo "<< cloudpipe tests passed"
 fi
