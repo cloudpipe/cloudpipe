@@ -9,7 +9,7 @@ import (
 
 // Account represents a user of the cluster.
 type Account struct {
-	Name  string `bson:"name"`
+	Name  string `bson:"_id"`
 	Admin bool   `bson:"admin"`
 
 	// TotalRuntime tracks the cumulative runtime of all jobs submitted on behalf of this account, in

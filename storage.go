@@ -18,6 +18,7 @@ type Storage interface {
 	UpdateJob(*SubmittedJob) error
 
 	GetAccount(name string) (*Account, error)
+	UpdateAccountAdmin(name string, admin bool) error
 	UpdateAccountUsage(name string, runtime int64) error
 }
 
@@ -50,6 +51,10 @@ func NewMongoStorage(c *Context) (*MongoStorage, error) {
 
 func (storage *MongoStorage) jobs() *mgo.Collection {
 	return storage.Database.C("jobs")
+}
+
+func (storage *MongoStorage) accounts() *mgo.Collection {
+	return storage.Database.C("accounts")
 }
 
 func (storage *MongoStorage) root() *mgo.Collection {
@@ -201,15 +206,35 @@ func (storage *MongoStorage) UpdateJob(job *SubmittedJob) error {
 
 // Account storage
 
-// GetAccount loads an account by its unique account name.
+// GetAccount loads an account by its unique account name, creating it if it doesn't already exist.
 func (storage *MongoStorage) GetAccount(name string) (*Account, error) {
-	var out Account
+	out := Account{Name: name}
+	_, err := storage.accounts().FindId(name).Apply(mgo.Change{
+		Update:    bson.M{"$setOnInsert": out},
+		Upsert:    true,
+		ReturnNew: true,
+	}, &out)
+	if err != nil {
+		return nil, err
+	}
 	return &out, nil
+}
+
+// UpdateAccountAdmin flags or unflags an account as an administrator.
+func (storage *MongoStorage) UpdateAccountAdmin(name string, admin bool) error {
+	return storage.accounts().UpdateId(name, bson.M{
+		"$set": bson.M{"admin": admin},
+	})
 }
 
 // UpdateAccountUsage updates an account to take a new job into account.
 func (storage *MongoStorage) UpdateAccountUsage(name string, runtime int64) error {
-	return nil
+	return storage.accounts().UpdateId(name, bson.M{
+		"$inc": bson.M{
+			"total_runtime": runtime,
+			"total_jobs":    1,
+		},
+	})
 }
 
 // NullStorage is a useful embeddable struct that can be used to mock selected storage calls without
@@ -247,6 +272,11 @@ func (storage NullStorage) UpdateJob(job *SubmittedJob) error {
 // GetAccount returns a fake, zero-initialized Account.
 func (storage NullStorage) GetAccount(name string) (*Account, error) {
 	return &Account{Name: name}, nil
+}
+
+// UpdateAccountAdmin is a no-op.
+func (storage NullStorage) UpdateAccountAdmin(name string, admin bool) error {
+	return nil
 }
 
 // UpdateAccountUsage is a no-op.
