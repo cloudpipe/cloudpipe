@@ -42,7 +42,7 @@ func NewMongoStorage(c *Context) (*MongoStorage, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &MongoStorage{Database: session.DB("rho")}, nil
+	return &MongoStorage{Database: session.DB("pipe")}, nil
 }
 
 func (storage *MongoStorage) jobs() *mgo.Collection {

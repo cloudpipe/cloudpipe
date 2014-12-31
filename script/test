@@ -5,9 +5,9 @@ cd ${ROOT}
 
 fig build
 
-echo ">> frontdoor tests"
+echo ">> cloudpipe tests"
 
-fig run --rm frontdoor go test github.com/cloudpipe/cloudpipe/frontdoor/...
+fig run --rm cloudpipe go test github.com/cloudpipe/cloudpipe/...
 STATUS=$?
 
 if [ "${STATUS}" != "0" ]; then

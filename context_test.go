@@ -10,20 +10,20 @@ import (
 func TestLoadFromEnvironment(t *testing.T) {
 	c := Context{}
 
-	os.Setenv("RHO_PORT", "1234")
-	os.Setenv("RHO_LOGLEVEL", "debug")
-	os.Setenv("RHO_MONGOURL", "server.example.com")
-	os.Setenv("RHO_ADMINNAME", "fake")
-	os.Setenv("RHO_ADMINKEY", "12345")
-	os.Setenv("RHO_POLL", "5000")
-	os.Setenv("RHO_IMAGE", "cloudpipe/runner-py2")
-	os.Setenv("RHO_DOCKERHOST", "tcp://1.2.3.4:4567/")
-	os.Setenv("RHO_DOCKERTLS", "true")
-	os.Setenv("RHO_DOCKERCACERT", "/lockbox/ca.pem")
-	os.Setenv("RHO_DOCKERCERT", "/lockbox/cert.pem")
-	os.Setenv("RHO_DOCKERKEY", "/lockbox/key.pem")
-	os.Setenv("RHO_WEB", "true")
-	os.Setenv("RHO_RUNNER", "true")
+	os.Setenv("PIPE_PORT", "1234")
+	os.Setenv("PIPE_LOGLEVEL", "debug")
+	os.Setenv("PIPE_MONGOURL", "server.example.com")
+	os.Setenv("PIPE_ADMINNAME", "fake")
+	os.Setenv("PIPE_ADMINKEY", "12345")
+	os.Setenv("PIPE_POLL", "5000")
+	os.Setenv("PIPE_IMAGE", "cloudpipe/runner-py2")
+	os.Setenv("PIPE_DOCKERHOST", "tcp://1.2.3.4:4567/")
+	os.Setenv("PIPE_DOCKERTLS", "true")
+	os.Setenv("PIPE_DOCKERCACERT", "/lockbox/ca.pem")
+	os.Setenv("PIPE_DOCKERCERT", "/lockbox/cert.pem")
+	os.Setenv("PIPE_DOCKERKEY", "/lockbox/key.pem")
+	os.Setenv("PIPE_WEB", "true")
+	os.Setenv("PIPE_RUNNER", "true")
 
 	if err := c.Load(); err != nil {
 		t.Errorf("Error loading configuration: %v", err)
@@ -89,23 +89,23 @@ func TestLoadFromEnvironment(t *testing.T) {
 func TestDefaultValues(t *testing.T) {
 	c := Context{}
 
-	os.Setenv("RHO_PORT", "")
-	os.Setenv("RHO_LOGLEVEL", "")
-	os.Setenv("RHO_MONGOURL", "")
-	os.Setenv("RHO_ADMINNAME", "")
-	os.Setenv("RHO_ADMINKEY", "")
-	os.Setenv("RHO_POLL", "")
-	os.Setenv("RHO_DOCKERHOST", "")
+	os.Setenv("PIPE_PORT", "")
+	os.Setenv("PIPE_LOGLEVEL", "")
+	os.Setenv("PIPE_MONGOURL", "")
+	os.Setenv("PIPE_ADMINNAME", "")
+	os.Setenv("PIPE_ADMINKEY", "")
+	os.Setenv("PIPE_POLL", "")
+	os.Setenv("PIPE_DOCKERHOST", "")
 	os.Setenv("DOCKER_HOST", "")
-	os.Setenv("RHO_DOCKERTLS", "")
-	os.Setenv("RHO_DOCKERCACERT", "")
-	os.Setenv("RHO_DOCKERCERT", "")
-	os.Setenv("RHO_DOCKERKEY", "")
+	os.Setenv("PIPE_DOCKERTLS", "")
+	os.Setenv("PIPE_DOCKERCACERT", "")
+	os.Setenv("PIPE_DOCKERCERT", "")
+	os.Setenv("PIPE_DOCKERKEY", "")
 	os.Setenv("DOCKER_TLS_VERIFY", "")
 	os.Setenv("DOCKER_CERT_PATH", "")
-	os.Setenv("RHO_IMAGE", "")
-	os.Setenv("RHO_WEB", "")
-	os.Setenv("RHO_RUNNER", "")
+	os.Setenv("PIPE_IMAGE", "")
+	os.Setenv("PIPE_WEB", "")
+	os.Setenv("PIPE_RUNNER", "")
 
 	u, err := user.Current()
 	if err != nil {
@@ -166,8 +166,8 @@ func TestDefaultValues(t *testing.T) {
 }
 
 func TestOnlyWeb(t *testing.T) {
-	os.Setenv("RHO_WEB", "true")
-	os.Setenv("RHO_RUNNER", "")
+	os.Setenv("PIPE_WEB", "true")
+	os.Setenv("PIPE_RUNNER", "")
 
 	c := Context{}
 	if err := c.Load(); err != nil {
@@ -183,8 +183,8 @@ func TestOnlyWeb(t *testing.T) {
 }
 
 func TestOnlyRunner(t *testing.T) {
-	os.Setenv("RHO_WEB", "")
-	os.Setenv("RHO_RUNNER", "true")
+	os.Setenv("PIPE_WEB", "")
+	os.Setenv("PIPE_RUNNER", "true")
 
 	c := Context{}
 	if err := c.Load(); err != nil {
@@ -200,7 +200,7 @@ func TestOnlyRunner(t *testing.T) {
 }
 
 func TestUseDockerHost(t *testing.T) {
-	os.Setenv("RHO_DOCKERHOST", "")
+	os.Setenv("PIPE_DOCKERHOST", "")
 	os.Setenv("DOCKER_HOST", "tcp://1.2.3.4:4567/")
 
 	c := Context{}
@@ -226,10 +226,10 @@ func TestAddressString(t *testing.T) {
 func TestValidateLogLevel(t *testing.T) {
 	c := Context{}
 
-	os.Setenv("RHO_LOGLEVEL", "Walrus")
+	os.Setenv("PIPE_LOGLEVEL", "Walrus")
 
 	err := c.Load()
 	if err == nil {
-		t.Errorf("Expected an error when loading an invalid RHO_LOG_LEVEL.")
+		t.Errorf("Expected an error when loading an invalid PIPE_LOG_LEVEL.")
 	}
 }

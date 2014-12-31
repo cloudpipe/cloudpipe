@@ -20,7 +20,7 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 	accountName, apiKey, ok := r.BasicAuth()
 	if !ok {
 		// Credentials not provided.
-		err := &RhoError{
+		err := &APIError{
 			Code:    CodeCredentialsMissing,
 			Message: "You must authenticate.",
 			Hint:    "Try using multyvac.config.set_key(api_key='username', api_secret_key='API key', api_url='') before calling other multyvac methods.",
@@ -44,7 +44,7 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 		}
 	}
 
-	err := &RhoError{
+	err := &APIError{
 		Code:    CodeCredentialsIncorrect,
 		Message: fmt.Sprintf("Unable to authenticate account [%s]", accountName),
 		Hint:    "Double-check the account name and API key you're providing to multyvac.config.set_key().",

@@ -1,12 +1,12 @@
 ---
-frontdoor:
-  build: frontdoor/
+cloudpipe:
+  build: .
   links:
   - mongo
   environment:
-    RHO_ADMINNAME: admin
-    RHO_ADMINKEY: 12345
-    RHO_LOGLEVEL: debug
+    PIPE_ADMINNAME: admin
+    PIPE_ADMINKEY: 12345
+    PIPE_LOGLEVEL: debug
   ports:
   - "8000:8000"
   volumes:

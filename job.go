@@ -103,10 +103,10 @@ type Job struct {
 
 // Validate ensures that all required fields have non-zero values, and that enum-like fields have
 // acceptable values.
-func (j Job) Validate() *RhoError {
+func (j Job) Validate() *APIError {
 	// Command is required.
 	if j.Command == "" {
-		return &RhoError{
+		return &APIError{
 			Code:    CodeMissingCommand,
 			Message: "All jobs must specify a command to execute.",
 			Hint:    `Specify a command to execute as a "cmd" element in your job.`,
@@ -115,7 +115,7 @@ func (j Job) Validate() *RhoError {
 
 	// ResultSource
 	if j.ResultSource != "stdout" && !strings.HasPrefix(j.ResultSource, "file:") {
-		return &RhoError{
+		return &APIError{
 			Code:    CodeInvalidResultSource,
 			Message: fmt.Sprintf("Invalid result source [%s]", j.ResultSource),
 			Hint:    `The "result_source" must be either "stdout" or "file:{path}".`,
@@ -129,7 +129,7 @@ func (j Job) Validate() *RhoError {
 			accepted = append(accepted, tp)
 		}
 
-		return &RhoError{
+		return &APIError{
 			Code:    CodeInvalidResultType,
 			Message: fmt.Sprintf("Invalid result type [%s]", j.ResultType),
 			Hint:    fmt.Sprintf(`The "result_type" must be one of the following: %s`, strings.Join(accepted, ", ")),
@@ -182,7 +182,7 @@ func JobHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		JobSubmitHandler(c, w, r)
 	default:
-		RhoError{
+		APIError{
 			Code:    CodeMethodNotSupported,
 			Message: "Method not supported",
 			Hint:    "Use GET or POST against this endpoint.",
@@ -217,7 +217,7 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			"account": account.Name,
 		}).Error("Unable to parse JSON.")
 
-		RhoError{
+		APIError{
 			Code:    CodeInvalidJobJSON,
 			Message: fmt.Sprintf("Unable to parse job payload as JSON: %v", err),
 			Hint:    "Please supply valid JSON in your request.",
@@ -254,7 +254,7 @@ func JobSubmitHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 				"error":   err,
 			}).Error("Unable to enqueue a submitted job.")
 
-			RhoError{
+			APIError{
 				Code:    CodeEnqueueFailure,
 				Message: "Unable to enqueue your job.",
 				Retry:   true,
@@ -288,7 +288,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := r.ParseForm(); err != nil {
-		RhoError{
+		APIError{
 			Code:    CodeUnableToParseQuery,
 			Message: fmt.Sprintf("Unable to parse query parameters: %v", err),
 			Hint:    "You broke Go's URL parsing somehow! Make URLs that suck less.",
@@ -302,7 +302,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		jids := make([]uint64, len(rawJIDs))
 		for i, rawJID := range rawJIDs {
 			if jids[i], err = strconv.ParseUint(rawJID, 10, 64); err != nil {
-				RhoError{
+				APIError{
 					Code:    CodeUnableToParseQuery,
 					Message: fmt.Sprintf("Unable to parse JID [%s]: %v", rawJID, err),
 					Hint:    "Please only use valid JIDs.",
@@ -322,7 +322,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	if rawLimit := r.FormValue("limit"); rawLimit != "" {
 		limit, err := strconv.ParseInt(rawLimit, 10, 0)
 		if err != nil {
-			RhoError{
+			APIError{
 				Code:    CodeUnableToParseQuery,
 				Message: fmt.Sprintf("Unable to parse limit [%s]: %v", rawLimit, err),
 				Hint:    "Please specify a valid integral limit.",
@@ -335,7 +335,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			limit = 9999
 		}
 		if limit < 1 {
-			RhoError{
+			APIError{
 				Code:    CodeUnableToParseQuery,
 				Message: fmt.Sprintf("Invalid negative or zero limit [%d]", limit),
 				Hint:    "Please specify a valid, positive integral limit.",
@@ -351,7 +351,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	if rawBefore := r.FormValue("before"); rawBefore != "" {
 		before, err := strconv.ParseUint(rawBefore, 10, 64)
 		if err != nil {
-			RhoError{
+			APIError{
 				Code:    CodeUnableToParseQuery,
 				Message: fmt.Sprintf(`Unable to parse Before bound [%s]: %v`, rawBefore, err),
 				Hint:    "Please specify a valid integral JID as the lower bound.",
@@ -364,7 +364,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	if rawAfter := r.FormValue("after"); rawAfter != "" {
 		after, err := strconv.ParseUint(rawAfter, 10, 64)
 		if err != nil {
-			RhoError{
+			APIError{
 				Code:    CodeUnableToParseQuery,
 				Message: fmt.Sprintf(`Unable to parse After bound [%s]: %v`, rawAfter, err),
 				Hint:    "Please specify a valid integral JID as the upper bound.",
@@ -377,7 +377,7 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	results, err := c.ListJobs(q)
 	if err != nil {
-		re := RhoError{
+		re := APIError{
 			Code:    CodeListFailure,
 			Message: fmt.Sprintf("Unable to list jobs: %v", err),
 			Hint:    "This is most likely a database problem.",

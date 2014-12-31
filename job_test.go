@@ -51,7 +51,7 @@ func TestJobHandlerBadRequest(t *testing.T) {
 
 	JobHandler(c, w, r)
 
-	hasError(t, w, http.StatusMethodNotAllowed, RhoError{
+	hasError(t, w, http.StatusMethodNotAllowed, APIError{
 		Code:    CodeMethodNotSupported,
 		Message: "Method not supported",
 		Retry:   false,
@@ -148,7 +148,7 @@ func TestSubmitJobBadResultSource(t *testing.T) {
 
 	JobHandler(c, w, r)
 
-	hasError(t, w, http.StatusBadRequest, RhoError{
+	hasError(t, w, http.StatusBadRequest, APIError{
 		Code:    CodeInvalidResultSource,
 		Message: "Invalid result source [magic]",
 		Retry:   false,
@@ -181,7 +181,7 @@ func TestSubmitJobBadResultType(t *testing.T) {
 
 	JobHandler(c, w, r)
 
-	hasError(t, w, http.StatusBadRequest, RhoError{
+	hasError(t, w, http.StatusBadRequest, APIError{
 		Code:    CodeInvalidResultType,
 		Message: "Invalid result type [elsewhere]",
 		Retry:   false,

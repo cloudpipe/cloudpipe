@@ -52,8 +52,8 @@ func BindContext(c *Context, handler ContextHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) { handler(c, w, r) }
 }
 
-// RhoError stores information that may be returned in an error response from the API.
-type RhoError struct {
+// APIError stores information that may be returned in an error response from the API.
+type APIError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 	Hint    string `json:"hint,omitempty"`
@@ -61,9 +61,9 @@ type RhoError struct {
 }
 
 // Report serializes an error report as JSON to an open ResponseWriter.
-func (e RhoError) Report(status int, w http.ResponseWriter) error {
+func (e APIError) Report(status int, w http.ResponseWriter) error {
 	var outer struct {
-		Error RhoError `json:"error"`
+		Error APIError `json:"error"`
 	}
 	outer.Error = e
 
@@ -82,8 +82,8 @@ func (e RhoError) Report(status int, w http.ResponseWriter) error {
 	return err
 }
 
-// Log logs a RhoError at the ERROR level.
-func (e RhoError) Log(account *Account) RhoError {
+// Log logs an APIError at the ERROR level.
+func (e APIError) Log(account *Account) APIError {
 	f := log.Fields{"error": e}
 	if account != nil {
 		f["account"] = account.Name
@@ -93,7 +93,7 @@ func (e RhoError) Log(account *Account) RhoError {
 	return e
 }
 
-func (e *RhoError) Error() string {
+func (e *APIError) Error() string {
 	return e.Message
 }
 
