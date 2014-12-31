@@ -405,7 +405,80 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // JobKillHandler allows a user to prematurely terminate a running job.
 func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	//
+	type Request struct {
+		JID uint64 `json:"jid"`
+	}
+
+	account, err := Authenticate(c, w, r)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Authentication failure.")
+		return
+	}
+
+	var req Request
+	err = json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		APIError{
+			Code:    CodeInvalidJobJSON,
+			Message: fmt.Sprintf("Unable to parse job payload as JSON: %v", err),
+			Hint:    "Please supply valid JSON in your request.",
+			Retry:   false,
+		}.Log(account).Report(http.StatusBadRequest, w)
+		return
+	}
+
+	jobs, err := c.ListJobs(JobQuery{
+		JIDs:        []uint64{req.JID},
+		AccountName: account.Name,
+	})
+	if err != nil {
+		APIError{
+			Code:    CodeListFailure,
+			Message: "Unable to list jobs.",
+			Hint:    "This is probably a storage error on our end.",
+			Retry:   true,
+		}.Log(account).Report(http.StatusInternalServerError, w)
+		return
+	}
+
+	if len(jobs) == 0 {
+		APIError{
+			Code:    CodeJobNotFound,
+			Message: fmt.Sprintf("Unable to find a job with ID [%s].", req.JID),
+			Hint:    "Make sure that the JID is still valid.",
+			Retry:   false,
+		}.Log(account).Report(http.StatusNotFound, w)
+		return
+	}
+	if len(jobs) != 1 {
+		APIError{
+			Code: CodeWTF,
+			Message: fmt.Sprintf(
+				"Job query for JID [%s] on account [%s] returned [%d] results.",
+				req.JID, account.Name, len(jobs),
+			),
+			Hint:  "No clue here.",
+			Retry: false,
+		}.Log(account).Report(http.StatusInternalServerError, w)
+		return
+	}
+
+	job := jobs[0]
+	job.KillRequested = true
+	err = c.UpdateJob(&job)
+	if err != nil {
+		APIError{
+			Code:    CodeJobUpdateFailure,
+			Message: fmt.Sprintf("Unable to request a job kill: %v", err),
+			Hint:    "This is probably a storage error on our end.",
+			Retry:   true,
+		}.Log(account).Report(http.StatusInternalServerError, w)
+		return
+	}
+
+	OKResponse(w)
 }
 
 // JobKillAllHandler allows a user to terminate all jobs associated with their account.

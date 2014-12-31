@@ -38,7 +38,19 @@ func (storage *JobStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
 		JID: 33,
 	}
 
-	return []SubmittedJob{j0, j1, j2}, nil
+	results := make([]SubmittedJob, 0, 3)
+	for _, job := range []SubmittedJob{j0, j1, j2} {
+		if len(query.JIDs) > 0 {
+			for _, jid := range query.JIDs {
+				if job.JID == jid {
+					results = append(results, job)
+				}
+			}
+		} else {
+			results = append(results, job)
+		}
+	}
+	return results, nil
 }
 
 func (storage *JobStorage) UpdateJob(job *SubmittedJob) error {
@@ -338,7 +350,7 @@ func TestSubmittedJobContainerName(t *testing.T) {
 }
 
 func TestSubmitJobKill(t *testing.T) {
-	r, err := http.NewRequest("POST", "https://localhost/v1/jobs/kill", strings.NewReader(`{ "jid": 1234 }`))
+	r, err := http.NewRequest("POST", "https://localhost/v1/jobs/kill", strings.NewReader(`{ "jid": 11 }`))
 	if err != nil {
 		t.Fatalf("Unable to create request: %v", err)
 	}

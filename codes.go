@@ -1,6 +1,9 @@
 package main
 
 const (
+	// CodeWTF is returned when an invariant turns out not to be true.
+	CodeWTF = "WTF"
+
 	// CodeCredentialsMissing means a request that was required to be authenticated had no auth data.
 	CodeCredentialsMissing = "ANONE"
 	// CodeCredentialsIncorrect means auth data on a request was present, but incorrect.
@@ -23,4 +26,8 @@ const (
 	CodeEnqueueFailure = "JQUEUE"
 	// CodeListFailure means that a query for jobs could not be performed by storage engine.
 	CodeListFailure = "JLIST"
+	// CodeJobUpdateFailure means that an update to an existing job was unable to be performed.
+	CodeJobUpdateFailure = "JUPD"
+	// CodeJobNotFound means that an action was attempted on a job that doesn't exist.
+	CodeJobNotFound = "JNF"
 )

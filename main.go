@@ -132,3 +132,8 @@ func (t *StoredTime) UnmarshalJSON(input []byte) error {
 	*t = StoredTime(parsed.UTC().UnixNano())
 	return err
 }
+
+// OKResponse returns the standard "all is well" response.
+func OKResponse(w http.ResponseWriter) {
+	fmt.Fprintf(w, `{"status":"ok"}`)
+}
