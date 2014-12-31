@@ -76,7 +76,7 @@ func NewContext() (*Context, error) {
 
 // Load configuration settings from the environment, apply defaults, and validate them.
 func (c *Context) Load() error {
-	if err := envconfig.Process("RHO", &c.Settings); err != nil {
+	if err := envconfig.Process("PIPE", &c.Settings); err != nil {
 		return err
 	}
 
@@ -136,8 +136,8 @@ func (c *Context) Load() error {
 
 	// If neither web nor runner are explicitly enabled, enable both.
 	if !c.Web && !c.Runner {
-		if os.Getenv("RHO_WEB") != "" && os.Getenv("RHO_RUNNER") != "" {
-			return errors.New("You must enable either RHO_WEB or RHO_RUNNER!")
+		if os.Getenv("PIPE_WEB") != "" && os.Getenv("PIPE_RUNNER") != "" {
+			return errors.New("You must enable either PIPE_WEB or PIPE_RUNNER!")
 		}
 
 		c.Web, c.Runner = true, true
