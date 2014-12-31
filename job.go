@@ -158,8 +158,9 @@ type SubmittedJob struct {
 
 	Collected Collected `json:"collected,omitempty" bson:"collected,omitempty"`
 
-	JID     uint64 `json:"jid" bson:"_id"`
-	Account string `json:"-" bson:"account"`
+	JID           uint64 `json:"jid" bson:"_id"`
+	Account       string `json:"-" bson:"account"`
+	KillRequested bool   `json:"-" bson:"kill_requested"`
 }
 
 // ContainerName derives a name for the Docker container used to execute this job.
