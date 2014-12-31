@@ -148,12 +148,19 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		return true
 	}
 
+	// Update the job model in mongo, reporting any errors along the way.
+	updateJob := func(message string) bool {
+		if err := c.UpdateJob(job); err != nil {
+			reportErr(fmt.Sprintf("Unable to update the job's %s.", message), err)
+			return false
+		}
+		return true
+	}
+
 	log.WithFields(defaultFields).Info("Launching a job.")
 
 	job.StartedAt = StoreTime(time.Now())
-	if err := c.UpdateJob(job); err != nil {
-		reportErr("Unable to update the job's start timestamp.", err)
-	}
+	updateJob("start timestamp")
 
 	container, err := client.CreateContainer(docker.CreateContainerOptions{
 		Name: job.ContainerName(),
@@ -165,6 +172,8 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		},
 	})
 	if checkErr("Created the job's container", err) {
+		job.Status = StatusError
+		updateJob("status")
 		return
 	}
 
@@ -202,11 +211,15 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	// Start the created container.
 	err = client.StartContainer(container.ID, &docker.HostConfig{})
 	if checkErr("Started the container", err) {
+		job.Status = StatusError
+		updateJob("status")
 		return
 	}
 
 	status, err := client.WaitContainer(container.ID)
 	if checkErr("Waited for the container to complete", err) {
+		job.Status = StatusError
+		updateJob("status")
 		return
 	}
 
@@ -265,10 +278,6 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	err = client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
 	checkErr("Removed the container", err)
 
-	err = c.UpdateJob(job)
-	if checkErr("Updated the job's status", err) {
-		return
-	}
-
+	updateJob("status and final result")
 	log.WithFields(log.Fields{"jid": job.JID}).Info("Job complete.")
 }
