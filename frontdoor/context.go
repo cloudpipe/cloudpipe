@@ -127,7 +127,7 @@ func (c *Context) Load() error {
 	}
 
 	if c.Image == "" {
-		c.Image = "rgbkrk/inrhocloud"
+		c.Image = "cloudpipe/runner-py2"
 	}
 
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {
