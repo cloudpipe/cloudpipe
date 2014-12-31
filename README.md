@@ -3,6 +3,8 @@ Cloud Pipe
 
 Compute on demand in Docker containers.
 
+[![Build Status](https://travis-ci.org/cloudpipe/cloudpipe.svg?branch=master)](https://travis-ci.org/cloudpipe/cloudpipe)
+
 ## Getting Started
 
  1. Install [Docker](https://docs.docker.com/installation/mac/) on your platform.
