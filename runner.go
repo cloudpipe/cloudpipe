@@ -292,5 +292,12 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	}
 	updateJob("status and final result")
 
-	log.WithFields(log.Fields{"jid": job.JID}).Info("Job complete.")
+	log.WithFields(log.Fields{
+		"jid":      job.JID,
+		"account":  job.Account,
+		"status":   job.Status,
+		"runtime":  job.Runtime,
+		"overhead": job.OverheadDelay,
+		"queue":    job.QueueDelay,
+	}).Info("Job complete.")
 }
