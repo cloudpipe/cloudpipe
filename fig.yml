@@ -13,3 +13,6 @@ cloudpipe:
   - "/var/run/docker.sock:/var/run/docker.sock"
 mongo:
   image: mongo:2.8
+dummyuserimage:
+  image: cloudpipe/runner-py2
+  command: "echo 'User image loaded'"
