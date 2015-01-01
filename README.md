@@ -16,7 +16,7 @@ database.
 
 ### Running code against the system
 
-Install `multyvac` for Python 2:
+For this iteration, we've implemented (some of) [multyvac's API](http://docs.multyvac.com/) allowing you to use `multyvac` for Python 2:
 
 ```
 pip install multyvac
