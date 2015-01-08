@@ -350,7 +350,8 @@ func TestSubmittedJobContainerName(t *testing.T) {
 }
 
 func TestSubmitJobKill(t *testing.T) {
-	r, err := http.NewRequest("POST", "https://localhost/v1/jobs/kill", strings.NewReader(`{ "jid": 11 }`))
+	r, err := http.NewRequest("POST", "https://localhost/v1/jobs/kill", strings.NewReader("jid=11"))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if err != nil {
 		t.Fatalf("Unable to create request: %v", err)
 	}
