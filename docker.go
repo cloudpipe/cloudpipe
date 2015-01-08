@@ -13,6 +13,7 @@ type Docker interface {
 	WaitContainer(string) (int, error)
 	CopyFromContainer(docker.CopyFromContainerOptions) error
 	RemoveContainer(docker.RemoveContainerOptions) error
+	KillContainer(docker.KillContainerOptions) error
 }
 
 // NullDocker is an embeddable struct that implements the full Docker interface as no-ops, allowing
@@ -46,6 +47,11 @@ func (n NullDocker) CopyFromContainer(docker.CopyFromContainerOptions) error {
 
 // RemoveContainer is a no-op.
 func (n NullDocker) RemoveContainer(docker.RemoveContainerOptions) error {
+	return nil
+}
+
+// KillContainer is a no-op.
+func (n NullDocker) KillContainer(docker.KillContainerOptions) error {
 	return nil
 }
 
