@@ -52,10 +52,9 @@ func (c OutputCollector) Write(p []byte) (int, error) {
 // Runner is the main entry point for the job runner goroutine.
 func Runner(c *Context) {
 	for {
-		select {
-		case <-time.After(time.Duration(c.Poll) * time.Millisecond):
-			Claim(c)
-		}
+		Claim(c)
+
+		time.Sleep(time.Duration(c.Poll) * time.Millisecond)
 	}
 }
 
@@ -123,7 +122,8 @@ func Execute(c *Context, job *SubmittedJob) {
 		return true
 	}
 
-	// Update the job model in mongo, reporting any errors along the way.
+	// Update the job model in Mongo, reporting any errors along the way.
+	// This also updates our job model with any changes from Mongo, such as the kill request flag.
 	updateJob := func(message string) bool {
 		if err := c.UpdateJob(job); err != nil {
 			reportErr(fmt.Sprintf("Unable to update the job's %s.", message), err)
@@ -136,7 +136,6 @@ func Execute(c *Context, job *SubmittedJob) {
 
 	job.StartedAt = StoreTime(time.Now())
 	job.QueueDelay = job.StartedAt.AsTime().Sub(job.CreatedAt.AsTime()).Nanoseconds()
-	updateJob("start timestamp")
 
 	container, err := c.CreateContainer(docker.CreateContainerOptions{
 		Name: job.ContainerName(),
@@ -153,108 +152,132 @@ func Execute(c *Context, job *SubmittedJob) {
 		return
 	}
 
+	// Record the job's container ID.
+	job.ContainerID = container.ID
+	if !updateJob("start timestamp and container id") {
+		return
+	}
+
 	// Include container information in this job's logging messages.
 	defaultFields["container id"] = container.ID
 	defaultFields["container name"] = container.Name
 
-	// Prepare the input and output streams.
-	stdin := bytes.NewReader(job.Stdin)
-	stdout := OutputCollector{
-		context:  c,
-		job:      job,
-		isStdout: true,
-	}
-	stderr := OutputCollector{
-		context:  c,
-		job:      job,
-		isStdout: false,
-	}
+	// Was a kill requested between the time the job was claimed, and the time the container was
+	// created? If so: transition the job to StatusKilled and jump ahead to removing the container
+	// we just created. If not: continue with job execution normally.
 
-	go func() {
-		err = c.AttachToContainer(docker.AttachToContainerOptions{
-			Container:    container.ID,
-			Stream:       true,
-			InputStream:  stdin,
-			OutputStream: stdout,
-			ErrorStream:  stderr,
-			Stdin:        true,
-			Stdout:       true,
-			Stderr:       true,
-		})
-		checkErr("Attached to the container", err)
-	}()
+	// If a kill was requested before the job was claimed, it would have been removed from the queue.
+	// If a kill is requested after the container was created, it will have the containerID that we
+	// just sent and be able to kill the running container.
 
-	// Start the created container.
-	err = c.StartContainer(container.ID, &docker.HostConfig{})
-	if checkErr("Started the container", err) {
-		job.Status = StatusError
-		updateJob("status")
-		return
-	}
-
-	// Measure the container-launch overhead here.
-	overhead := time.Now()
-	job.OverheadDelay = overhead.Sub(job.StartedAt.AsTime()).Nanoseconds()
-	updateJob("overhead delay")
-
-	status, err := c.WaitContainer(container.ID)
-	if checkErr("Waited for the container to complete", err) {
-		job.Status = StatusError
-		updateJob("status")
-		return
-	}
-
-	job.FinishedAt = StoreTime(time.Now())
-	job.Runtime = job.FinishedAt.AsTime().Sub(overhead).Nanoseconds()
-	if status == 0 {
-		// Successful termination.
-		job.Status = StatusDone
+	if job.KillRequested {
+		job.Status = StatusKilled
 	} else {
-		// Something went wrong.
-		job.Status = StatusError
-	}
-
-	// Extract the result from the job.
-	if job.ResultSource == "stdout" {
-		job.Result = []byte(job.Stdout)
-		debug("Acquired job result from stdout: ok")
-	} else if strings.HasPrefix(job.ResultSource, "file:") {
-		resultPath := job.ResultSource[len("file:"):len(job.ResultSource)]
-
-		var resultBuffer bytes.Buffer
-		err = c.CopyFromContainer(docker.CopyFromContainerOptions{
-			Container:    container.ID,
-			Resource:     resultPath,
-			OutputStream: &resultBuffer,
-		})
-		if checkErr(fmt.Sprintf("Acquired the job's result from the file [%s]", resultPath), err) {
-			job.Status = StatusError
-		} else {
-			// CopyFromContainer returns the file contents as a tarball.
-			var content bytes.Buffer
-			r := bytes.NewReader(resultBuffer.Bytes())
-			tr := tar.NewReader(r)
-
-			for {
-				_, err := tr.Next()
-				if err == io.EOF {
-					break
-				}
-				if err != nil {
-					reportErr("Read tar-encoded content: ERROR", err)
-					job.Status = StatusError
-					break
-				}
-
-				if _, err = io.Copy(&content, tr); err != nil {
-					reportErr("Copy decoded content: ERROR", err)
-					job.Status = StatusError
-					break
-				}
-			}
-
-			job.Result = content.Bytes()
+		// Prepare the input and output streams.
+		stdin := bytes.NewReader(job.Stdin)
+		stdout := OutputCollector{
+			context:  c,
+			job:      job,
+			isStdout: true,
 		}
+		stderr := OutputCollector{
+			context:  c,
+			job:      job,
+			isStdout: false,
+		}
+
+		go func() {
+			err = c.AttachToContainer(docker.AttachToContainerOptions{
+				Container:    container.ID,
+				Stream:       true,
+				InputStream:  stdin,
+				OutputStream: stdout,
+				ErrorStream:  stderr,
+				Stdin:        true,
+				Stdout:       true,
+				Stderr:       true,
+			})
+			checkErr("Attached to the container", err)
+		}()
+
+		// Start the created container.
+		err = c.StartContainer(container.ID, &docker.HostConfig{})
+		if checkErr("Started the container", err) {
+			job.Status = StatusError
+			updateJob("status")
+			return
+		}
+
+		// Measure the container-launch overhead here.
+		overhead := time.Now()
+		job.OverheadDelay = overhead.Sub(job.StartedAt.AsTime()).Nanoseconds()
+		updateJob("overhead delay")
+
+		status, err := c.WaitContainer(container.ID)
+		if checkErr("Waited for the container to complete", err) {
+			job.Status = StatusError
+			updateJob("status")
+			return
+		}
+
+		job.FinishedAt = StoreTime(time.Now())
+		job.Runtime = job.FinishedAt.AsTime().Sub(overhead).Nanoseconds()
+		if status == 0 {
+			// Successful termination.
+			job.Status = StatusDone
+		} else {
+			// Something went wrong.
+
+			// See if a kill was explicitly requested. If so, transition to StatusKilled. Otherwise,
+			// transition to StatusError.
+
+			job.Status = StatusError
+		}
+
+		// Extract the result from the job.
+		if job.ResultSource == "stdout" {
+			job.Result = []byte(job.Stdout)
+			debug("Acquired job result from stdout: ok")
+		} else if strings.HasPrefix(job.ResultSource, "file:") {
+			resultPath := job.ResultSource[len("file:"):len(job.ResultSource)]
+
+			var resultBuffer bytes.Buffer
+			err = c.CopyFromContainer(docker.CopyFromContainerOptions{
+				Container:    container.ID,
+				Resource:     resultPath,
+				OutputStream: &resultBuffer,
+			})
+			if checkErr(fmt.Sprintf("Acquired the job's result from the file [%s]", resultPath), err) {
+				job.Status = StatusError
+			} else {
+				// CopyFromContainer returns the file contents as a tarball.
+				var content bytes.Buffer
+				r := bytes.NewReader(resultBuffer.Bytes())
+				tr := tar.NewReader(r)
+
+				for {
+					_, err := tr.Next()
+					if err == io.EOF {
+						break
+					}
+					if err != nil {
+						reportErr("Read tar-encoded content: ERROR", err)
+						job.Status = StatusError
+						break
+					}
+
+					if _, err = io.Copy(&content, tr); err != nil {
+						reportErr("Copy decoded content: ERROR", err)
+						job.Status = StatusError
+						break
+					}
+				}
+
+				job.Result = content.Bytes()
+			}
+		}
+
+		// Job execution has completed successfully.
 	}
 
 	err = c.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
