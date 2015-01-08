@@ -16,6 +16,8 @@ const (
 
 	// CodeInvalidJobJSON means a POST body to /jobs was not parseable JSON.
 	CodeInvalidJobJSON = "JPRS"
+	// CodeInvalidJobForm means that a POST body did not contain form-encoded data.
+	CodeInvalidJobForm = "JFRM"
 	// CodeMissingCommand means a job is missing a "cmd" element.
 	CodeMissingCommand = "JCMD"
 	// CodeInvalidResultSource means a job has an invalid result source.

@@ -407,10 +407,6 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // JobKillHandler allows a user to prematurely terminate a running job.
 func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	type Request struct {
-		JID uint64 `json:"jid"`
-	}
-
 	account, err := Authenticate(c, w, r)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -419,20 +415,30 @@ func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req Request
-	err = json.NewDecoder(r.Body).Decode(&req)
+	if err = r.ParseForm(); err != nil {
+		APIError{
+			Code:    CodeInvalidJobForm,
+			Message: fmt.Sprintf("Unable to parse Job: Kill payload as a POST body: %v", err),
+			Hint:    "Please use valid form encoding in your request.",
+			Retry:   false,
+		}.Log(account).Report(http.StatusBadRequest, w)
+		return
+	}
+
+	jidstr := r.PostFormValue("jid")
+	jid, err := strconv.ParseUint(jidstr, 10, 64)
 	if err != nil {
 		APIError{
-			Code:    CodeInvalidJobJSON,
-			Message: fmt.Sprintf("Unable to parse job payload as JSON: %v", err),
-			Hint:    "Please supply valid JSON in your request.",
+			Code:    CodeInvalidJobForm,
+			Message: fmt.Sprintf("Unable to parse Job: Kill payload as a valid JID: %v", err),
+			Hint:    "Please provide a valid integer job ID to Job: Kill.",
 			Retry:   false,
 		}.Log(account).Report(http.StatusBadRequest, w)
 		return
 	}
 
 	jobs, err := c.ListJobs(JobQuery{
-		JIDs:        []uint64{req.JID},
+		JIDs:        []uint64{jid},
 		AccountName: account.Name,
 	})
 	if err != nil {
@@ -448,7 +454,7 @@ func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 	if len(jobs) == 0 {
 		APIError{
 			Code:    CodeJobNotFound,
-			Message: fmt.Sprintf("Unable to find a job with ID [%s].", req.JID),
+			Message: fmt.Sprintf("Unable to find a job with ID [%s].", jid),
 			Hint:    "Make sure that the JID is still valid.",
 			Retry:   false,
 		}.Log(account).Report(http.StatusNotFound, w)
@@ -459,7 +465,7 @@ func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			Code: CodeWTF,
 			Message: fmt.Sprintf(
 				"Job query for JID [%s] on account [%s] returned [%d] results.",
-				req.JID, account.Name, len(jobs),
+				jid, account.Name, len(jobs),
 			),
 			Hint:  "Duplicate JID. No clue how that happened.",
 			Retry: false,
@@ -500,6 +506,16 @@ func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			}.Log(account).Report(http.StatusInternalServerError, w)
 			return
 		}
+
+		log.WithFields(log.Fields{
+			"jid":     job.JID,
+			"account": account.Name,
+		}).Info("Running job killed.")
+	} else {
+		log.WithFields(log.Fields{
+			"jid":     job.JID,
+			"account": account.Name,
+		}).Info("Job kill requested.")
 	}
 
 	OKResponse(w)
