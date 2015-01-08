@@ -225,6 +225,49 @@ func Execute(c *Context, job *SubmittedJob) {
 		if status == 0 {
 			// Successful termination.
 			job.Status = StatusDone
+
+			// Extract the result from the job.
+			if job.ResultSource == "stdout" {
+				job.Result = []byte(job.Stdout)
+				debug("Acquired job result from stdout: ok")
+			} else if strings.HasPrefix(job.ResultSource, "file:") {
+				resultPath := job.ResultSource[len("file:"):len(job.ResultSource)]
+
+				var resultBuffer bytes.Buffer
+				err = c.CopyFromContainer(docker.CopyFromContainerOptions{
+					Container:    container.ID,
+					Resource:     resultPath,
+					OutputStream: &resultBuffer,
+				})
+				if checkErr(fmt.Sprintf("Acquired the job's result from the file [%s]", resultPath), err) {
+					job.Status = StatusError
+				} else {
+					// CopyFromContainer returns the file contents as a tarball.
+					var content bytes.Buffer
+					r := bytes.NewReader(resultBuffer.Bytes())
+					tr := tar.NewReader(r)
+
+					for {
+						_, err := tr.Next()
+						if err == io.EOF {
+							break
+						}
+						if err != nil {
+							reportErr("Read tar-encoded content: ERROR", err)
+							job.Status = StatusError
+							break
+						}
+
+						if _, err = io.Copy(&content, tr); err != nil {
+							reportErr("Copy decoded content: ERROR", err)
+							job.Status = StatusError
+							break
+						}
+					}
+
+					job.Result = content.Bytes()
+				}
+			}
 		} else {
 			// Something went wrong.
 
@@ -243,49 +286,6 @@ func Execute(c *Context, job *SubmittedJob) {
 			}
 		}
 
-		// Extract the result from the job.
-		if job.ResultSource == "stdout" {
-			job.Result = []byte(job.Stdout)
-			debug("Acquired job result from stdout: ok")
-		} else if strings.HasPrefix(job.ResultSource, "file:") {
-			resultPath := job.ResultSource[len("file:"):len(job.ResultSource)]
-
-			var resultBuffer bytes.Buffer
-			err = c.CopyFromContainer(docker.CopyFromContainerOptions{
-				Container:    container.ID,
-				Resource:     resultPath,
-				OutputStream: &resultBuffer,
-			})
-			if checkErr(fmt.Sprintf("Acquired the job's result from the file [%s]", resultPath), err) {
-				job.Status = StatusError
-			} else {
-				// CopyFromContainer returns the file contents as a tarball.
-				var content bytes.Buffer
-				r := bytes.NewReader(resultBuffer.Bytes())
-				tr := tar.NewReader(r)
-
-				for {
-					_, err := tr.Next()
-					if err == io.EOF {
-						break
-					}
-					if err != nil {
-						reportErr("Read tar-encoded content: ERROR", err)
-						job.Status = StatusError
-						break
-					}
-
-					if _, err = io.Copy(&content, tr); err != nil {
-						reportErr("Copy decoded content: ERROR", err)
-						job.Status = StatusError
-						break
-					}
-				}
-
-				job.Result = content.Bytes()
-			}
-		}
-
 		// Job execution has completed successfully.
 	}
 
@@ -295,7 +295,6 @@ func Execute(c *Context, job *SubmittedJob) {
 	err = c.UpdateAccountUsage(job.Account, job.Runtime)
 	if err != nil {
 		reportErr("Update account usage: ERROR", err)
-		return
 	}
 	updateJob("status and final result")
 
