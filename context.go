@@ -8,12 +8,14 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
+	docker "github.com/smashwilson/go-dockerclient"
 )
 
 // Context provides shared state among individual route handlers.
 type Context struct {
 	Settings
 	Storage
+	Docker
 }
 
 // Settings contains configuration options loaded from the environment.
@@ -73,6 +75,30 @@ func NewContext() (*Context, error) {
 	}
 	if err := c.Storage.Bootstrap(); err != nil {
 		return c, err
+	}
+
+	// Connect to Docker.
+
+	if c.DockerTLS {
+		c.Docker, err = docker.NewTLSClient(c.DockerHost, c.DockerCert, c.DockerKey, c.DockerCACert)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"docker host":    c.DockerHost,
+				"docker cert":    c.DockerCert,
+				"docker key":     c.DockerKey,
+				"docker CA cert": c.DockerCACert,
+			}).Fatal("Unable to connect to Docker with TLS.")
+			return c, err
+		}
+	} else {
+		c.Docker, err = docker.NewClient(c.DockerHost)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"docker host": c.DockerHost,
+				"error":       err,
+			}).Fatal("Unable to connect to Docker.")
+			return c, err
+		}
 	}
 
 	return c, nil

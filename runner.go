@@ -51,42 +51,17 @@ func (c OutputCollector) Write(p []byte) (int, error) {
 
 // Runner is the main entry point for the job runner goroutine.
 func Runner(c *Context) {
-	var client *docker.Client
-	var err error
-
-	if c.DockerTLS {
-		client, err = docker.NewTLSClient(c.DockerHost, c.DockerCert, c.DockerKey, c.DockerCACert)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"docker host":    c.DockerHost,
-				"docker cert":    c.DockerCert,
-				"docker key":     c.DockerKey,
-				"docker CA cert": c.DockerCACert,
-			}).Fatal("Unable to connect to Docker with TLS.")
-			return
-		}
-	} else {
-		client, err = docker.NewClient(c.DockerHost)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"docker host": c.DockerHost,
-				"error":       err,
-			}).Fatal("Unable to connect to Docker.")
-			return
-		}
-	}
-
 	for {
 		select {
 		case <-time.After(time.Duration(c.Poll) * time.Millisecond):
-			Claim(c, client)
+			Claim(c)
 		}
 	}
 }
 
 // Claim acquires the oldest single pending job and launches a goroutine to execute its command in
 // a new container.
-func Claim(c *Context, client *docker.Client) {
+func Claim(c *Context) {
 	job, err := c.ClaimJob()
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Unable to claim a job.")
@@ -114,13 +89,13 @@ func Claim(c *Context, client *docker.Client) {
 		return
 	}
 
-	go Execute(c, client, job)
+	go Execute(c, job)
 }
 
 // Execute launches a container to process the submitted job. It passes any provided stdin data
 // to the container and consumes stdout and stderr, updating Mongo as it runs. Once completed, it
 // acquires the job's result from its configured source and marks the job as finished.
-func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
+func Execute(c *Context, job *SubmittedJob) {
 	defaultFields := log.Fields{
 		"jid":     job.JID,
 		"account": job.Account,
@@ -163,7 +138,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	job.QueueDelay = job.StartedAt.AsTime().Sub(job.CreatedAt.AsTime()).Nanoseconds()
 	updateJob("start timestamp")
 
-	container, err := client.CreateContainer(docker.CreateContainerOptions{
+	container, err := c.CreateContainer(docker.CreateContainerOptions{
 		Name: job.ContainerName(),
 		Config: &docker.Config{
 			Image:     c.Image,
@@ -196,7 +171,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	}
 
 	go func() {
-		err = client.AttachToContainer(docker.AttachToContainerOptions{
+		err = c.AttachToContainer(docker.AttachToContainerOptions{
 			Container:    container.ID,
 			Stream:       true,
 			InputStream:  stdin,
@@ -210,7 +185,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	}()
 
 	// Start the created container.
-	err = client.StartContainer(container.ID, &docker.HostConfig{})
+	err = c.StartContainer(container.ID, &docker.HostConfig{})
 	if checkErr("Started the container", err) {
 		job.Status = StatusError
 		updateJob("status")
@@ -222,7 +197,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 	job.OverheadDelay = overhead.Sub(job.StartedAt.AsTime()).Nanoseconds()
 	updateJob("overhead delay")
 
-	status, err := client.WaitContainer(container.ID)
+	status, err := c.WaitContainer(container.ID)
 	if checkErr("Waited for the container to complete", err) {
 		job.Status = StatusError
 		updateJob("status")
@@ -247,7 +222,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		resultPath := job.ResultSource[len("file:"):len(job.ResultSource)]
 
 		var resultBuffer bytes.Buffer
-		err = client.CopyFromContainer(docker.CopyFromContainerOptions{
+		err = c.CopyFromContainer(docker.CopyFromContainerOptions{
 			Container:    container.ID,
 			Resource:     resultPath,
 			OutputStream: &resultBuffer,
@@ -282,7 +257,7 @@ func Execute(c *Context, client *docker.Client, job *SubmittedJob) {
 		}
 	}
 
-	err = client.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
+	err = c.RemoveContainer(docker.RemoveContainerOptions{ID: container.ID})
 	checkErr("Removed the container", err)
 
 	err = c.UpdateAccountUsage(job.Account, job.Runtime)
