@@ -26,6 +26,8 @@ const (
 	CodeEnqueueFailure = "JQUEUE"
 	// CodeListFailure means that a query for jobs could not be performed by storage engine.
 	CodeListFailure = "JLIST"
+	// CodeJobKillFailure means that a job's container was unable to be killed.
+	CodeJobKillFailure = "JKILL"
 	// CodeJobUpdateFailure means that an update to an existing job was unable to be performed.
 	CodeJobUpdateFailure = "JUPD"
 	// CodeJobNotFound means that an action was attempted on a job that doesn't exist.

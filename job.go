@@ -9,6 +9,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	docker "github.com/smashwilson/go-dockerclient"
 )
 
 // JobLayer associates a Layer with a Job.
@@ -160,7 +161,8 @@ type SubmittedJob struct {
 
 	JID           uint64 `json:"jid" bson:"_id"`
 	Account       string `json:"-" bson:"account"`
-	KillRequested bool   `json:"-" bson:"kill_requested"`
+	ContainerID   string `json:"-" bson:"container_id,omitempty"`
+	KillRequested bool   `json:"-" bson:"kill_requested,omitempty"`
 }
 
 // ContainerName derives a name for the Docker container used to execute this job.
@@ -459,15 +461,24 @@ func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 				"Job query for JID [%s] on account [%s] returned [%d] results.",
 				req.JID, account.Name, len(jobs),
 			),
-			Hint:  "No clue here.",
+			Hint:  "Duplicate JID. No clue how that happened.",
 			Retry: false,
 		}.Log(account).Report(http.StatusInternalServerError, w)
 		return
 	}
 
-	job := jobs[0]
+	job := &jobs[0]
+
 	job.KillRequested = true
-	err = c.UpdateJob(&job)
+
+	// If the container ID hasn't been assigned yet, the job most likely isn't running.
+	// If it's already left StatusQueued, let the job runner handle the transition to
+	// StatusKilled. Otherwise, set it to StatusKilled ourselves to remove it from the queue.
+	if job.Status == StatusQueued {
+		job.Status = StatusKilled
+	}
+
+	err = c.UpdateJob(job)
 	if err != nil {
 		APIError{
 			Code:    CodeJobUpdateFailure,
@@ -476,6 +487,19 @@ func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 			Retry:   true,
 		}.Log(account).Report(http.StatusInternalServerError, w)
 		return
+	}
+
+	if job.ContainerID != "" {
+		err = c.KillContainer(docker.KillContainerOptions{ID: job.ContainerID})
+		if err != nil {
+			APIError{
+				Code:    CodeJobKillFailure,
+				Message: fmt.Sprintf("Unable to kill a running job: %v", err),
+				Hint:    "The container is misbehaving somehow.",
+				Retry:   true,
+			}.Log(account).Report(http.StatusInternalServerError, w)
+			return
+		}
 	}
 
 	OKResponse(w)
