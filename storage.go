@@ -180,9 +180,9 @@ func (storage *MongoStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
 // JobKillRequested returns true if a request has been submitted to kill the job with with provided
 // JID, and false otherwise.
 func (storage *MongoStorage) JobKillRequested(id uint64) (bool, error) {
-	var result bool
+	var result SubmittedJob
 	err := storage.jobs().FindId(id).Select(bson.M{"kill_requested": 1}).One(&result)
-	return result, err
+	return result.KillRequested, err
 }
 
 // ClaimJob atomically searches for the oldest pending SubmittedJob, marks it as StatusProcessing,
