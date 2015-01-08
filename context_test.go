@@ -22,8 +22,6 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("PIPE_DOCKERCACERT", "/lockbox/ca.pem")
 	os.Setenv("PIPE_DOCKERCERT", "/lockbox/cert.pem")
 	os.Setenv("PIPE_DOCKERKEY", "/lockbox/key.pem")
-	os.Setenv("PIPE_WEB", "true")
-	os.Setenv("PIPE_RUNNER", "true")
 
 	if err := c.Load(); err != nil {
 		t.Errorf("Error loading configuration: %v", err)
@@ -76,14 +74,6 @@ func TestLoadFromEnvironment(t *testing.T) {
 	if c.AdminKey != "12345" {
 		t.Errorf("Unexpected administrator API key: [%s]", c.AdminKey)
 	}
-
-	if !c.Web {
-		t.Error("Expected Web to be enabled.")
-	}
-
-	if !c.Runner {
-		t.Error("Expected Runner to be enabled.")
-	}
 }
 
 func TestDefaultValues(t *testing.T) {
@@ -104,8 +94,6 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("DOCKER_TLS_VERIFY", "")
 	os.Setenv("DOCKER_CERT_PATH", "")
 	os.Setenv("PIPE_IMAGE", "")
-	os.Setenv("PIPE_WEB", "")
-	os.Setenv("PIPE_RUNNER", "")
 
 	u, err := user.Current()
 	if err != nil {
@@ -155,47 +143,6 @@ func TestDefaultValues(t *testing.T) {
 
 	if c.Image != "cloudpipe/runner-py2" {
 		t.Errorf("Unexpected default image: [%s]", c.Image)
-	}
-
-	if !c.Web {
-		t.Error("Expected Web to be enabled.")
-	}
-	if !c.Runner {
-		t.Error("Expected Runner to be enabled.")
-	}
-}
-
-func TestOnlyWeb(t *testing.T) {
-	os.Setenv("PIPE_WEB", "true")
-	os.Setenv("PIPE_RUNNER", "")
-
-	c := Context{}
-	if err := c.Load(); err != nil {
-		t.Errorf("Error loading configuration: %v", err)
-	}
-
-	if !c.Web {
-		t.Error("Expected Web to be enabled.")
-	}
-	if c.Runner {
-		t.Error("Expected Runner to be disabled.")
-	}
-}
-
-func TestOnlyRunner(t *testing.T) {
-	os.Setenv("PIPE_WEB", "")
-	os.Setenv("PIPE_RUNNER", "true")
-
-	c := Context{}
-	if err := c.Load(); err != nil {
-		t.Errorf("Error loading configuration: %v", err)
-	}
-
-	if c.Web {
-		t.Error("Expected Web to be disabled.")
-	}
-	if !c.Runner {
-		t.Error("Expected Runner to be enabled.")
 	}
 }
 

@@ -20,28 +20,19 @@ func main() {
 
 	log.Info("Commence primary ignition.")
 
-	if c.Runner {
-		if c.Web {
-			log.Info("Launching job runner as a goroutine.")
-			go Runner(c)
-		} else {
-			log.Info("Launching job runner in the foreground.")
-			Runner(c)
-		}
-	}
+	log.Info("Launching job runner.")
+	go Runner(c)
 
-	if c.Web {
-		// v1 routes
-		http.HandleFunc("/v1/job", BindContext(c, JobHandler))
-		http.HandleFunc("/v1/job/kill", BindContext(c, JobKillHandler))
-		http.HandleFunc("/v1/job/kill_all", BindContext(c, JobKillAllHandler))
-		http.HandleFunc("/v1/job/queue_stats", BindContext(c, JobQueueStatsHandler))
+	// v1 routes
+	http.HandleFunc("/v1/job", BindContext(c, JobHandler))
+	http.HandleFunc("/v1/job/kill", BindContext(c, JobKillHandler))
+	http.HandleFunc("/v1/job/kill_all", BindContext(c, JobKillAllHandler))
+	http.HandleFunc("/v1/job/queue_stats", BindContext(c, JobQueueStatsHandler))
 
-		log.WithFields(log.Fields{
-			"address": c.ListenAddr(),
-		}).Info("Web API listening.")
-		http.ListenAndServe(c.ListenAddr(), nil)
-	}
+	log.WithFields(log.Fields{
+		"address": c.ListenAddr(),
+	}).Info("Web API listening.")
+	http.ListenAndServe(c.ListenAddr(), nil)
 }
 
 // ContextHandler is an HTTP HandlerFunc that accepts an additional parameter containing the

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -31,8 +30,6 @@ type Settings struct {
 	DockerKey    string
 	Image        string
 	Poll         int
-	Web          bool
-	Runner       bool
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -139,15 +136,6 @@ func (c *Context) Load() error {
 
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {
 		return err
-	}
-
-	// If neither web nor runner are explicitly enabled, enable both.
-	if !c.Web && !c.Runner {
-		if os.Getenv("PIPE_WEB") != "" && os.Getenv("PIPE_RUNNER") != "" {
-			return errors.New("You must enable either PIPE_WEB or PIPE_RUNNER!")
-		}
-
-		c.Web, c.Runner = true, true
 	}
 
 	return nil
