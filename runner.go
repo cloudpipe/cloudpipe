@@ -230,8 +230,17 @@ func Execute(c *Context, job *SubmittedJob) {
 
 			// See if a kill was explicitly requested. If so, transition to StatusKilled. Otherwise,
 			// transition to StatusError.
+			killed, err := c.JobKillRequested(job.JID)
+			if err != nil {
+				reportErr("Check the job kill status: ERROR", err)
+				return
+			}
 
-			job.Status = StatusError
+			if killed {
+				job.Status = StatusKilled
+			} else {
+				job.Status = StatusError
+			}
 		}
 
 		// Extract the result from the job.
