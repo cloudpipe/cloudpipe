@@ -47,10 +47,17 @@ func NewContext() (*Context, error) {
 	// Summarize the loaded settings.
 
 	log.WithFields(log.Fields{
-		"port":          c.Port,
-		"logging level": c.LogLevel,
-		"mongo URL":     c.MongoURL,
-		"admin account": c.AdminName,
+		"port":               c.Port,
+		"logging level":      c.LogLevel,
+		"mongo URL":          c.MongoURL,
+		"admin account":      c.AdminName,
+		"docker host":        c.DockerHost,
+		"docker TLS enabled": c.DockerTLS,
+		"docker CA cert":     c.DockerCACert,
+		"docker cert":        c.DockerCert,
+		"docker key":         c.DockerKey,
+		"default layer":      c.Image,
+		"polling interval":   c.Poll,
 	}).Info("Initializing with loaded settings.")
 
 	// Configure the logging level.
