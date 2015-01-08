@@ -14,6 +14,7 @@ type Storage interface {
 
 	InsertJob(SubmittedJob) (uint64, error)
 	ListJobs(JobQuery) ([]SubmittedJob, error)
+	JobKillRequested(id uint64) (bool, error)
 	ClaimJob() (*SubmittedJob, error)
 	UpdateJob(*SubmittedJob) error
 
@@ -176,6 +177,14 @@ func (storage *MongoStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
 	return result, nil
 }
 
+// JobKillRequested returns true if a request has been submitted to kill the job with with provided
+// JID, and false otherwise.
+func (storage *MongoStorage) JobKillRequested(id uint64) (bool, error) {
+	var result bool
+	err := storage.jobs().FindId(id).Select(bson.M{"kill_requested": 1}).One(&result)
+	return result, err
+}
+
 // ClaimJob atomically searches for the oldest pending SubmittedJob, marks it as StatusProcessing,
 // and returns it. nil is returned if no SubmittedJobs are available.
 func (storage *MongoStorage) ClaimJob() (*SubmittedJob, error) {
@@ -257,6 +266,11 @@ func (storage NullStorage) InsertJob(job SubmittedJob) (uint64, error) {
 // ListJobs returns an empty collection.
 func (storage NullStorage) ListJobs(query JobQuery) ([]SubmittedJob, error) {
 	return []SubmittedJob{}, nil
+}
+
+// JobKillRequested always returns false.
+func (storage NullStorage) JobKillRequested(id uint64) (bool, error) {
+	return false, nil
 }
 
 // ClaimJob always returns nil.
