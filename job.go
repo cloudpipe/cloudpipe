@@ -437,10 +437,14 @@ func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jobs, err := c.ListJobs(JobQuery{
-		JIDs:        []uint64{jid},
-		AccountName: account.Name,
-	})
+	sudo := r.PostFormValue("sudo") == "true"
+
+	query := JobQuery{JIDs: []uint64{jid}}
+	if !sudo {
+		query.AccountName = account.Name
+	}
+
+	jobs, err := c.ListJobs(query)
 	if err != nil {
 		APIError{
 			Code:    CodeListFailure,
@@ -510,11 +514,13 @@ func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{
 			"jid":     job.JID,
 			"account": account.Name,
+			"sudo":    sudo,
 		}).Info("Running job killed.")
 	} else {
 		log.WithFields(log.Fields{
 			"jid":     job.JID,
 			"account": account.Name,
+			"sudo":    sudo,
 		}).Info("Job kill requested.")
 	}
 
