@@ -9,6 +9,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	docker "github.com/smashwilson/go-dockerclient"
 )
 
 // JobLayer associates a Layer with a Job.
@@ -158,8 +159,10 @@ type SubmittedJob struct {
 
 	Collected Collected `json:"collected,omitempty" bson:"collected,omitempty"`
 
-	JID     uint64 `json:"jid" bson:"_id"`
-	Account string `json:"-" bson:"account"`
+	JID           uint64 `json:"jid" bson:"_id"`
+	Account       string `json:"-" bson:"account"`
+	ContainerID   string `json:"-" bson:"container_id,omitempty"`
+	KillRequested bool   `json:"-" bson:"kill_requested,omitempty"`
 }
 
 // ContainerName derives a name for the Docker container used to execute this job.
@@ -404,7 +407,124 @@ func JobListHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 
 // JobKillHandler allows a user to prematurely terminate a running job.
 func JobKillHandler(c *Context, w http.ResponseWriter, r *http.Request) {
-	//
+	account, err := Authenticate(c, w, r)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+		}).Error("Authentication failure.")
+		return
+	}
+
+	if err = r.ParseForm(); err != nil {
+		APIError{
+			Code:    CodeInvalidJobForm,
+			Message: fmt.Sprintf("Unable to parse Job: Kill payload as a POST body: %v", err),
+			Hint:    "Please use valid form encoding in your request.",
+			Retry:   false,
+		}.Log(account).Report(http.StatusBadRequest, w)
+		return
+	}
+
+	jidstr := r.PostFormValue("jid")
+	jid, err := strconv.ParseUint(jidstr, 10, 64)
+	if err != nil {
+		APIError{
+			Code:    CodeInvalidJobForm,
+			Message: fmt.Sprintf("Unable to parse Job: Kill payload as a valid JID: %v", err),
+			Hint:    "Please provide a valid integer job ID to Job: Kill.",
+			Retry:   false,
+		}.Log(account).Report(http.StatusBadRequest, w)
+		return
+	}
+
+	sudo := r.PostFormValue("sudo") == "true"
+
+	query := JobQuery{JIDs: []uint64{jid}}
+	if !sudo {
+		query.AccountName = account.Name
+	}
+
+	jobs, err := c.ListJobs(query)
+	if err != nil {
+		APIError{
+			Code:    CodeListFailure,
+			Message: "Unable to list jobs.",
+			Hint:    "This is probably a storage error on our end.",
+			Retry:   true,
+		}.Log(account).Report(http.StatusInternalServerError, w)
+		return
+	}
+
+	if len(jobs) == 0 {
+		APIError{
+			Code:    CodeJobNotFound,
+			Message: fmt.Sprintf("Unable to find a job with ID [%s].", jid),
+			Hint:    "Make sure that the JID is still valid.",
+			Retry:   false,
+		}.Log(account).Report(http.StatusNotFound, w)
+		return
+	}
+	if len(jobs) != 1 {
+		APIError{
+			Code: CodeWTF,
+			Message: fmt.Sprintf(
+				"Job query for JID [%s] on account [%s] returned [%d] results.",
+				jid, account.Name, len(jobs),
+			),
+			Hint:  "Duplicate JID. No clue how that happened.",
+			Retry: false,
+		}.Log(account).Report(http.StatusInternalServerError, w)
+		return
+	}
+
+	job := &jobs[0]
+
+	job.KillRequested = true
+
+	// If the container ID hasn't been assigned yet, the job most likely isn't running.
+	// If it's already left StatusQueued, let the job runner handle the transition to
+	// StatusKilled. Otherwise, set it to StatusKilled ourselves to remove it from the queue.
+	if job.Status == StatusQueued {
+		job.Status = StatusKilled
+	}
+
+	err = c.UpdateJob(job)
+	if err != nil {
+		APIError{
+			Code:    CodeJobUpdateFailure,
+			Message: fmt.Sprintf("Unable to request a job kill: %v", err),
+			Hint:    "This is probably a storage error on our end.",
+			Retry:   true,
+		}.Log(account).Report(http.StatusInternalServerError, w)
+		return
+	}
+
+	if job.ContainerID != "" {
+		err = c.KillContainer(docker.KillContainerOptions{ID: job.ContainerID})
+		if err != nil {
+			APIError{
+				Code:    CodeJobKillFailure,
+				Message: fmt.Sprintf("Unable to kill a running job: %v", err),
+				Hint:    "The container is misbehaving somehow.",
+				Retry:   true,
+			}.Log(account).Report(http.StatusInternalServerError, w)
+			return
+		}
+
+		log.WithFields(log.Fields{
+			"jid":     job.JID,
+			"account": account.Name,
+			"sudo":    sudo,
+		}).Info("Running job killed.")
+	} else {
+		log.WithFields(log.Fields{
+			"jid":     job.JID,
+			"account": account.Name,
+			"sudo":    sudo,
+		}).Info("Job kill requested.")
+	}
+
+	OKResponse(w)
 }
 
 // JobKillAllHandler allows a user to terminate all jobs associated with their account.

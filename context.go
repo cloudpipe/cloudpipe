@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -9,12 +8,14 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/kelseyhightower/envconfig"
+	docker "github.com/smashwilson/go-dockerclient"
 )
 
 // Context provides shared state among individual route handlers.
 type Context struct {
 	Settings
 	Storage
+	Docker
 }
 
 // Settings contains configuration options loaded from the environment.
@@ -31,8 +32,6 @@ type Settings struct {
 	DockerKey    string
 	Image        string
 	Poll         int
-	Web          bool
-	Runner       bool
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -47,10 +46,17 @@ func NewContext() (*Context, error) {
 	// Summarize the loaded settings.
 
 	log.WithFields(log.Fields{
-		"port":          c.Port,
-		"logging level": c.LogLevel,
-		"mongo URL":     c.MongoURL,
-		"admin account": c.AdminName,
+		"port":               c.Port,
+		"logging level":      c.LogLevel,
+		"mongo URL":          c.MongoURL,
+		"admin account":      c.AdminName,
+		"docker host":        c.DockerHost,
+		"docker TLS enabled": c.DockerTLS,
+		"docker CA cert":     c.DockerCACert,
+		"docker cert":        c.DockerCert,
+		"docker key":         c.DockerKey,
+		"default layer":      c.Image,
+		"polling interval":   c.Poll,
 	}).Info("Initializing with loaded settings.")
 
 	// Configure the logging level.
@@ -69,6 +75,30 @@ func NewContext() (*Context, error) {
 	}
 	if err := c.Storage.Bootstrap(); err != nil {
 		return c, err
+	}
+
+	// Connect to Docker.
+
+	if c.DockerTLS {
+		c.Docker, err = docker.NewTLSClient(c.DockerHost, c.DockerCert, c.DockerKey, c.DockerCACert)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"docker host":    c.DockerHost,
+				"docker cert":    c.DockerCert,
+				"docker key":     c.DockerKey,
+				"docker CA cert": c.DockerCACert,
+			}).Fatal("Unable to connect to Docker with TLS.")
+			return c, err
+		}
+	} else {
+		c.Docker, err = docker.NewClient(c.DockerHost)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"docker host": c.DockerHost,
+				"error":       err,
+			}).Fatal("Unable to connect to Docker.")
+			return c, err
+		}
 	}
 
 	return c, nil
@@ -132,15 +162,6 @@ func (c *Context) Load() error {
 
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {
 		return err
-	}
-
-	// If neither web nor runner are explicitly enabled, enable both.
-	if !c.Web && !c.Runner {
-		if os.Getenv("PIPE_WEB") != "" && os.Getenv("PIPE_RUNNER") != "" {
-			return errors.New("You must enable either PIPE_WEB or PIPE_RUNNER!")
-		}
-
-		c.Web, c.Runner = true, true
 	}
 
 	return nil
