@@ -22,6 +22,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("PIPE_DOCKERCACERT", "/lockbox/ca.pem")
 	os.Setenv("PIPE_DOCKERCERT", "/lockbox/cert.pem")
 	os.Setenv("PIPE_DOCKERKEY", "/lockbox/key.pem")
+	os.Setenv("PIPE_AUTHSERVICE", "https://auth")
 
 	if err := c.Load(); err != nil {
 		t.Errorf("Error loading configuration: %v", err)
@@ -74,6 +75,10 @@ func TestLoadFromEnvironment(t *testing.T) {
 	if c.AdminKey != "12345" {
 		t.Errorf("Unexpected administrator API key: [%s]", c.AdminKey)
 	}
+
+	if c.AuthService != "https://auth" {
+		t.Errorf("Unexpected authentication service URL: [%s]", c.AuthService)
+	}
 }
 
 func TestDefaultValues(t *testing.T) {
@@ -94,6 +99,7 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("DOCKER_TLS_VERIFY", "")
 	os.Setenv("DOCKER_CERT_PATH", "")
 	os.Setenv("PIPE_IMAGE", "")
+	os.Setenv("PIPE_AUTHSERVICE", "")
 
 	u, err := user.Current()
 	if err != nil {
@@ -143,6 +149,10 @@ func TestDefaultValues(t *testing.T) {
 
 	if c.Image != "cloudpipe/runner-py2" {
 		t.Errorf("Unexpected default image: [%s]", c.Image)
+	}
+
+	if c.AuthService != "" {
+		t.Errorf("Unexpected default auth service: [%s]", c.AuthService)
 	}
 }
 

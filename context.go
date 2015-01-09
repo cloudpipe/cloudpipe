@@ -32,6 +32,7 @@ type Settings struct {
 	DockerKey    string
 	Image        string
 	Poll         int
+	AuthService  string
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
