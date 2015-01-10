@@ -19,7 +19,7 @@ func ConnectToAuthService(address string) (AuthService, error) {
 		return NullAuthService{}, nil
 	}
 
-	if !strings.HasPrefix(address, "https") {
+	if !strings.HasPrefix(address, "https://") {
 		log.WithFields(log.Fields{
 			"address": address,
 		}).Warn("Non-HTTPS address in use for authentication. Bad! Bad! Bad!")
@@ -36,6 +36,7 @@ type RemoteAuthService struct {
 // Validate sends a request to the configured authentication service to determine whether or not
 // a username-token pair is valid.
 func (service RemoteAuthService) Validate(username, token string) (bool, error) {
+
 	return false, nil
 }
 
