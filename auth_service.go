@@ -1,6 +1,10 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -25,7 +29,11 @@ func ConnectToAuthService(address string) (AuthService, error) {
 		}).Warn("Non-HTTPS address in use for authentication. Bad! Bad! Bad!")
 	}
 
-	return RemoteAuthService{ValidateURL: address}, nil
+	if !strings.HasSuffix(address, "/") {
+		address = address + "/"
+	}
+
+	return RemoteAuthService{ValidateURL: address + "validate"}, nil
 }
 
 // RemoteAuthService is an auth service that's implemented by calls to an HTTPS remote API.
@@ -36,8 +44,30 @@ type RemoteAuthService struct {
 // Validate sends a request to the configured authentication service to determine whether or not
 // a username-token pair is valid.
 func (service RemoteAuthService) Validate(username, token string) (bool, error) {
+	v := url.Values{}
+	v.Set("username", username)
+	v.Set("token", token)
+	resp, err := http.Get(service.ValidateURL + "?" + v.Encode())
+	if err != nil {
+		return false, err
+	}
 
-	return false, nil
+	switch resp.StatusCode {
+	case http.StatusNoContent:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	default:
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			body = []byte(fmt.Sprintf("Error fetching body: %v", err))
+		}
+		log.WithFields(log.Fields{
+			"status": resp.Status,
+			"body":   string(body),
+		}).Error("The authentication service did something unexpected.")
+		return false, fmt.Errorf("unexpected HTTP status %d from auth service", resp.StatusCode)
+	}
 }
 
 // NullAuthService is an AuthService implementation that refuses all users and provides no optional
