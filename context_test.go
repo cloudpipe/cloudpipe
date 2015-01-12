@@ -20,9 +20,9 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("PIPE_IMAGE", "cloudpipe/runner-py2")
 	os.Setenv("PIPE_DOCKERHOST", "tcp://1.2.3.4:4567/")
 	os.Setenv("PIPE_DOCKERTLS", "true")
-	os.Setenv("PIPE_DOCKERCACERT", "/lockbox/ca.pem")
-	os.Setenv("PIPE_DOCKERCERT", "/lockbox/cert.pem")
-	os.Setenv("PIPE_DOCKERKEY", "/lockbox/key.pem")
+	os.Setenv("PIPE_CACERT", "/lockbox/ca.pem")
+	os.Setenv("PIPE_CERT", "/lockbox/cert.pem")
+	os.Setenv("PIPE_KEY", "/lockbox/key.pem")
 	os.Setenv("PIPE_AUTHSERVICE", "https://auth")
 
 	if err := c.Load(); err != nil {
@@ -57,16 +57,16 @@ func TestLoadFromEnvironment(t *testing.T) {
 		t.Errorf("Expected docker TLS to be enabled.")
 	}
 
-	if c.DockerCACert != "/lockbox/ca.pem" {
-		t.Errorf("Unexpected docker CA cert: [%s]", c.DockerCACert)
+	if c.CACert != "/lockbox/ca.pem" {
+		t.Errorf("Unexpected docker CA cert: [%s]", c.CACert)
 	}
 
-	if c.DockerCert != "/lockbox/cert.pem" {
-		t.Errorf("Unexpected docker cert: [%s]", c.DockerCert)
+	if c.Cert != "/lockbox/cert.pem" {
+		t.Errorf("Unexpected docker cert: [%s]", c.Cert)
 	}
 
-	if c.DockerKey != "/lockbox/key.pem" {
-		t.Errorf("Unexpected docker key: [%s]", c.DockerKey)
+	if c.Key != "/lockbox/key.pem" {
+		t.Errorf("Unexpected docker key: [%s]", c.Key)
 	}
 
 	if c.Image != "cloudpipe/runner-py2" {
@@ -99,9 +99,9 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("PIPE_DOCKERHOST", "")
 	os.Setenv("DOCKER_HOST", "")
 	os.Setenv("PIPE_DOCKERTLS", "")
-	os.Setenv("PIPE_DOCKERCACERT", "")
-	os.Setenv("PIPE_DOCKERCERT", "")
-	os.Setenv("PIPE_DOCKERKEY", "")
+	os.Setenv("PIPE_CACERT", "")
+	os.Setenv("PIPE_CERT", "")
+	os.Setenv("PIPE_KEY", "")
 	os.Setenv("DOCKER_TLS_VERIFY", "")
 	os.Setenv("DOCKER_CERT_PATH", "")
 	os.Setenv("PIPE_IMAGE", "")
@@ -145,16 +145,16 @@ func TestDefaultValues(t *testing.T) {
 		t.Errorf("Expected docker TLS to be disabled.")
 	}
 
-	if c.DockerCACert != path.Join(home, ".docker", "ca.pem") {
-		t.Errorf("Unexpected docker CA cert: [%s]", c.DockerCACert)
+	if c.CACert != path.Join(home, ".docker", "ca.pem") {
+		t.Errorf("Unexpected docker CA cert: [%s]", c.CACert)
 	}
 
-	if c.DockerCert != path.Join(home, ".docker", "cert.pem") {
-		t.Errorf("Unexpected docker cert: [%s]", c.DockerCert)
+	if c.Cert != path.Join(home, ".docker", "cert.pem") {
+		t.Errorf("Unexpected docker cert: [%s]", c.Cert)
 	}
 
-	if c.DockerKey != path.Join(home, ".docker", "key.pem") {
-		t.Errorf("Unexpected docker key: [%s]", c.DockerKey)
+	if c.Key != path.Join(home, ".docker", "key.pem") {
+		t.Errorf("Unexpected docker key: [%s]", c.Key)
 	}
 
 	if c.Image != "cloudpipe/runner-py2" {

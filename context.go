@@ -20,20 +20,20 @@ type Context struct {
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
-	Port         int
-	LogLevel     string
-	LogColors    bool
-	MongoURL     string
-	AdminName    string
-	AdminKey     string
-	DockerHost   string
-	DockerTLS    bool
-	DockerCACert string
-	DockerCert   string
-	DockerKey    string
-	Image        string
-	Poll         int
-	AuthService  string
+	Port        int
+	LogLevel    string
+	LogColors   bool
+	MongoURL    string
+	AdminName   string
+	AdminKey    string
+	DockerHost  string
+	DockerTLS   bool
+	CACert      string
+	Cert        string
+	Key         string
+	Image       string
+	Poll        int
+	AuthService string
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -67,9 +67,9 @@ func NewContext() (*Context, error) {
 		"admin account":      c.AdminName,
 		"docker host":        c.DockerHost,
 		"docker TLS enabled": c.DockerTLS,
-		"docker CA cert":     c.DockerCACert,
-		"docker cert":        c.DockerCert,
-		"docker key":         c.DockerKey,
+		"CA cert":            c.CACert,
+		"cert":               c.Cert,
+		"key":                c.Key,
 		"default layer":      c.Image,
 		"polling interval":   c.Poll,
 	}).Info("Initializing with loaded settings.")
@@ -87,13 +87,10 @@ func NewContext() (*Context, error) {
 	// Connect to Docker.
 
 	if c.DockerTLS {
-		c.Docker, err = docker.NewTLSClient(c.DockerHost, c.DockerCert, c.DockerKey, c.DockerCACert)
+		c.Docker, err = docker.NewTLSClient(c.DockerHost, c.Cert, c.Key, c.CACert)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"docker host":    c.DockerHost,
-				"docker cert":    c.DockerCert,
-				"docker key":     c.DockerKey,
-				"docker CA cert": c.DockerCACert,
+				"docker host": c.DockerHost,
 			}).Fatal("Unable to connect to Docker with TLS.")
 			return c, err
 		}
@@ -151,16 +148,16 @@ func (c *Context) Load() error {
 		certRoot = path.Join(user.HomeDir, ".docker")
 	}
 
-	if c.DockerCACert == "" {
-		c.DockerCACert = path.Join(certRoot, "ca.pem")
+	if c.CACert == "" {
+		c.CACert = path.Join(certRoot, "ca.pem")
 	}
 
-	if c.DockerCert == "" {
-		c.DockerCert = path.Join(certRoot, "cert.pem")
+	if c.Cert == "" {
+		c.Cert = path.Join(certRoot, "cert.pem")
 	}
 
-	if c.DockerKey == "" {
-		c.DockerKey = path.Join(certRoot, "key.pem")
+	if c.Key == "" {
+		c.Key = path.Join(certRoot, "key.pem")
 	}
 
 	if c.Image == "" {
