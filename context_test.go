@@ -12,6 +12,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	os.Setenv("PIPE_PORT", "1234")
 	os.Setenv("PIPE_LOGLEVEL", "debug")
+	os.Setenv("PIPE_LOGCOLORS", "true")
 	os.Setenv("PIPE_MONGOURL", "server.example.com")
 	os.Setenv("PIPE_ADMINNAME", "fake")
 	os.Setenv("PIPE_ADMINKEY", "12345")
@@ -34,6 +35,10 @@ func TestLoadFromEnvironment(t *testing.T) {
 
 	if c.LogLevel != "debug" {
 		t.Errorf("Unexpected log level: [%s]", c.LogLevel)
+	}
+
+	if !c.LogColors {
+		t.Error("Expected log coloring to be enabled")
 	}
 
 	if c.MongoURL != "server.example.com" {
@@ -86,6 +91,7 @@ func TestDefaultValues(t *testing.T) {
 
 	os.Setenv("PIPE_PORT", "")
 	os.Setenv("PIPE_LOGLEVEL", "")
+	os.Setenv("PIPE_LOGCOLORS", "")
 	os.Setenv("PIPE_MONGOURL", "")
 	os.Setenv("PIPE_ADMINNAME", "")
 	os.Setenv("PIPE_ADMINKEY", "")
@@ -117,6 +123,10 @@ func TestDefaultValues(t *testing.T) {
 
 	if c.LogLevel != "info" {
 		t.Errorf("Unexpected logging level: [%s]", c.LogLevel)
+	}
+
+	if c.LogColors {
+		t.Error("Expected logging colors to be disabled by default")
 	}
 
 	if c.MongoURL != "mongo" {

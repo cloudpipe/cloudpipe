@@ -22,6 +22,7 @@ type Context struct {
 type Settings struct {
 	Port         int
 	LogLevel     string
+	LogColors    bool
 	MongoURL     string
 	AdminName    string
 	AdminKey     string
@@ -44,11 +45,24 @@ func NewContext() (*Context, error) {
 		return c, err
 	}
 
+	// Configure the logging level and formatter.
+
+	level, err := log.ParseLevel(c.LogLevel)
+	if err != nil {
+		return c, err
+	}
+	log.SetLevel(level)
+
+	log.SetFormatter(&log.TextFormatter{
+		ForceColors: c.LogColors,
+	})
+
 	// Summarize the loaded settings.
 
 	log.WithFields(log.Fields{
 		"port":               c.Port,
 		"logging level":      c.LogLevel,
+		"log with color":     c.LogColors,
 		"mongo URL":          c.MongoURL,
 		"admin account":      c.AdminName,
 		"docker host":        c.DockerHost,
@@ -59,14 +73,6 @@ func NewContext() (*Context, error) {
 		"default layer":      c.Image,
 		"polling interval":   c.Poll,
 	}).Info("Initializing with loaded settings.")
-
-	// Configure the logging level.
-
-	level, err := log.ParseLevel(c.LogLevel)
-	if err != nil {
-		return c, err
-	}
-	log.SetLevel(level)
 
 	// Connect to MongoDB.
 

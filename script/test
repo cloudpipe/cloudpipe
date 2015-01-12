@@ -1,17 +1,10 @@
 #!/bin/bash
 
+set -e
+
 ROOT=$(dirname $0)/..
 cd ${ROOT}
 
-fig build
+fig build >/dev/null 2>&1 || echo "fig build failed!"
 
-echo ">> cloudpipe tests"
-
-fig run --rm cloudpipe go test github.com/cloudpipe/cloudpipe/...
-STATUS=$?
-
-if [ "${STATUS}" != "0" ]; then
-  echo "!! cloudpipe tests are failing"
-else
-  echo "<< cloudpipe tests passed"
-fi
+exec fig run --no-deps --rm cloudpipe go test github.com/cloudpipe/cloudpipe/... $@
