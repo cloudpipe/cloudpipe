@@ -6,8 +6,7 @@ set -o errexit
 
 ROOT=$(cd $(dirname $0)/..; pwd)
 
-OPENSSL="docker run --interactive=true --tty=true"
-OPENSSL="${OPENSSL} --volume ${ROOT}/certificates:/certificates --rm smashwilson/openssl"
+OPENSSL="docker run --volume ${ROOT}/certificates:/certificates --rm smashwilson/openssl"
 
 FIRSTCERT="true"
 PASSFILE="${ROOT}/certificates/dev.password"
