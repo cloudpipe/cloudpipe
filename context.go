@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/user"
 	"path"
@@ -16,6 +20,8 @@ type Context struct {
 	Settings
 	Storage
 	Docker
+
+	HTTPS *http.Client
 }
 
 // Settings contains configuration options loaded from the environment.
@@ -73,6 +79,32 @@ func NewContext() (*Context, error) {
 		"default layer":      c.Image,
 		"polling interval":   c.Poll,
 	}).Info("Initializing with loaded settings.")
+
+	// Configure a HTTP(S) client to use the provided TLS credentials.
+
+	caCertPool := x509.NewCertPool()
+
+	caCertPEM, err := ioutil.ReadFile(c.CACert)
+	if err != nil {
+		log.Debug("Hint: if you're running in dev mode, try running script/genkeys first.")
+		return nil, fmt.Errorf("unable to load CA certificate: %v", err)
+	}
+	caCertPool.AppendCertsFromPEM(caCertPEM)
+
+	keypair, err := tls.LoadX509KeyPair(c.Cert, c.Key)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load TLS keypair: %v", err)
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:            caCertPool,
+		Certificates:       []tls.Certificate{keypair},
+		MinVersion:         tls.VersionTLS10,
+		InsecureSkipVerify: false,
+	}
+
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	c.HTTPS = &http.Client{Transport: transport}
 
 	// Connect to MongoDB.
 
