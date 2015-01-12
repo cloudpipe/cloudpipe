@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+#
+# Generate a set of TLS credentials that can be used to run development mode.
+
+set -o errexit
+
+ROOT=$(cd $(dirname $0)/..; pwd)
+
+OPENSSL="docker run --interactive=true --tty=true"
+OPENSSL="${OPENSSL} --volume ${ROOT}/certificates:/certificates --rm smashwilson/openssl"
+
+FIRSTCERT="true"
+
+# Generate the certificate authority that we'll use as the root for all the things.
+echo ">> generating a certificate authority"
+${OPENSSL} openssl genrsa -des3 -out /certificates/ca-key.pem 2048
+${OPENSSL} openssl req -new -x509 -days 365 \
+  -key /certificates/ca-key.pem \
+  -out /certificates/ca.pem
+echo "<< certificate authority generated."
+
+# Generate a named keypair
+keypair() {
+  local NAME=$1
+  local HOSTNAME=$2
+  local SERIALOPT="-CAserial /certificates/ca.srl"
+
+  if [ "${FIRSTCERT}" = "true" ]; then
+    SERIALOPT="-CAcreateserial"
+    FIRSTCERT="false"
+  fi
+
+  echo ">> generating a keypair for: ${NAME}"
+
+  echo ".. key"
+  ${OPENSSL} openssl genrsa -des3 -out /certificates/${NAME}-key.pem 2048
+
+  echo ".. request"
+  ${OPENSSL} openssl req -subj "/CN=${HOSTNAME}" -new \
+    -key /certificates/${NAME}-key.pem \
+    -out /certificates/${NAME}-req.csr
+
+  echo ".. certificate"
+  ${OPENSSL} openssl x509 -req -days 365 \
+    -in /certificates/${NAME}-req.csr \
+    -CA /certificates/ca.pem \
+    -CAkey /certificates/ca-key.pem \
+    ${SERIALOPT} \
+    -out /certificates/${NAME}-cert.pem
+
+  echo "<< ${NAME} keypair generated."
+}
+
+# Keypair for the API and job runner.
+keypair cloudpipe cloudpipe
+
+# Keypair for the authentication server.
+keypair auth-local auth
