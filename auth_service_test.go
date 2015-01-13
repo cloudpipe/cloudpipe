@@ -53,12 +53,12 @@ func TestSuccessfulRemoteAuth(t *testing.T) {
 			t.Errorf("Unexpected error parsing form: %v", err)
 		}
 
-		if username := r.FormValue("username"); username != "someuser" {
-			t.Errorf("Unexpected username: [%s]", username)
+		if username := r.FormValue("accountName"); username != "someuser" {
+			t.Errorf("Unexpected account name: [%s]", username)
 		}
 
-		if token := r.FormValue("token"); token != "1234567" {
-			t.Errorf("Unexpected token: [%s]", token)
+		if token := r.FormValue("apiKey"); token != "1234567" {
+			t.Errorf("Unexpected API key: [%s]", token)
 		}
 
 		w.WriteHeader(http.StatusNoContent)

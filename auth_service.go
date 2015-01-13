@@ -13,7 +13,7 @@ import (
 // AuthService describes the required and optional services that may be supplied by an authentication
 // backend for cloudpipe.
 type AuthService interface {
-	Validate(username, token string) (bool, error)
+	Validate(accountName, apiKey string) (bool, error)
 }
 
 // ConnectToAuthService initializes an appropriate AuthService implementation based on a (possibly
@@ -46,11 +46,11 @@ type RemoteAuthService struct {
 }
 
 // Validate sends a request to the configured authentication service to determine whether or not
-// a username-token pair is valid.
-func (service RemoteAuthService) Validate(username, token string) (bool, error) {
+// an API key is valid for an account.
+func (service RemoteAuthService) Validate(accountName, apiKey string) (bool, error) {
 	v := url.Values{}
-	v.Set("username", username)
-	v.Set("token", token)
+	v.Set("accountName", accountName)
+	v.Set("apiKey", apiKey)
 	resp, err := service.HTTPS.Get(service.ValidateURL + "?" + v.Encode())
 	if err != nil {
 		return false, err
@@ -69,7 +69,7 @@ func (service RemoteAuthService) Validate(username, token string) (bool, error) 
 		log.WithFields(log.Fields{
 			"status": resp.Status,
 			"body":   string(body),
-		}).Error("The authentication service did something unexpected.")
+		}).Error("The authentication service returned an unexpected response.")
 		return false, fmt.Errorf("unexpected HTTP status %d from auth service", resp.StatusCode)
 	}
 }
@@ -79,8 +79,8 @@ func (service RemoteAuthService) Validate(username, token string) (bool, error) 
 // test cases.
 type NullAuthService struct{}
 
-// Validate rejects all username-token pairs.
-func (service NullAuthService) Validate(username, token string) (bool, error) {
+// Validate rejects all account-API key pairs.
+func (service NullAuthService) Validate(accountName, apiKey string) (bool, error) {
 	return false, nil
 }
 
