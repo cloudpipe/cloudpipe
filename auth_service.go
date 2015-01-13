@@ -13,7 +13,11 @@ import (
 // AuthService describes the required and optional services that may be supplied by an authentication
 // backend for cloudpipe.
 type AuthService interface {
+	// Validate determines whether or not an API key is valid for a specific, named account.
 	Validate(accountName, apiKey string) (bool, error)
+
+	// Style provides a hint to the UI to indicate what other calls may be valid against this service.
+	Style() string
 }
 
 // ConnectToAuthService initializes an appropriate AuthService implementation based on a (possibly
@@ -74,6 +78,12 @@ func (service RemoteAuthService) Validate(accountName, apiKey string) (bool, err
 	}
 }
 
+// Style provides a hint to external API consumers about other calls and capabilities that this
+// authentication service may implement.
+func (service RemoteAuthService) Style() string {
+	return "local"
+}
+
 // NullAuthService is an AuthService implementation that refuses all users and provides no optional
 // capabilities. It's used as a default if no AuthService is provided and is useful to embed in
 // test cases.
@@ -82,6 +92,11 @@ type NullAuthService struct{}
 // Validate rejects all account-API key pairs.
 func (service NullAuthService) Validate(accountName, apiKey string) (bool, error) {
 	return false, nil
+}
+
+// Style informs any API consumers that no other authentication capabilities are present.
+func (service NullAuthService) Style() string {
+	return "null"
 }
 
 // Ensure that NullAuthService adheres to the AuthService interface.

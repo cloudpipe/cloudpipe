@@ -14,6 +14,12 @@ func (service TrustingAuthService) Validate(username, token string) (bool, error
 	return true, nil
 }
 
+// Style yells at you for using this in production somehow, even though it's only defined for
+// tests.
+func (service TrustingAuthService) Style() string {
+	return "what are you, nuts"
+}
+
 func setupAuthRecorder(t *testing.T, username, key string) (*http.Request, *httptest.ResponseRecorder) {
 	r, err := http.NewRequest("GET", "https://localhost/v1/jobs", nil)
 	if err != nil {
