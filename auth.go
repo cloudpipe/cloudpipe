@@ -58,12 +58,40 @@ func Authenticate(c *Context, w http.ResponseWriter, r *http.Request) (*Account,
 		}
 	}
 
-	err := &APIError{
-		Code:    CodeCredentialsIncorrect,
-		Message: fmt.Sprintf("Unable to authenticate account [%s]", accountName),
-		Hint:    "Double-check the account name and API key you're providing to multyvac.config.set_key().",
-		Retry:   false,
+	ok, err := c.AuthService.Validate(accountName, apiKey)
+	if err != nil {
+		apiErr := &APIError{
+			Code:    CodeAuthServiceConnection,
+			Message: fmt.Sprintf("Unable to connect to authentication service: %v", err),
+			Hint:    "This is most likely an internal networking problem on our end.",
+			Retry:   true,
+		}
+		apiErr.Report(http.StatusInternalServerError, w)
+		return nil, apiErr
 	}
-	err.Report(http.StatusUnauthorized, w)
-	return nil, err
+	if !ok {
+		apiErr := &APIError{
+			Code:    CodeCredentialsIncorrect,
+			Message: fmt.Sprintf("Unable to authenticate account [%s]", accountName),
+			Hint:    "Double-check the account name and API key you're providing to multyvac.config.set_key().",
+			Retry:   false,
+		}
+		apiErr.Report(http.StatusUnauthorized, w)
+		return nil, apiErr
+	}
+
+	// Success! Find or create the Account object in Mongo to return.
+	account, err := c.GetAccount(accountName)
+	if err != nil {
+		apiErr := &APIError{
+			Code:    CodeStorageError,
+			Message: fmt.Sprintf("Unable to communicate with storage: %v", err),
+			Hint:    "There was an internal error communicating with our backend storage.",
+			Retry:   true,
+		}
+		apiErr.Report(http.StatusInternalServerError, w)
+		return nil, apiErr
+	}
+
+	return account, nil
 }
