@@ -21,11 +21,7 @@ func authTeardown() {
 }
 
 func TestDefaultToNullService(t *testing.T) {
-	service, err := ConnectToAuthService(&Context{}, "")
-	if err != nil {
-		t.Fatalf("Unexpect error connecting to auth service: %v", err)
-	}
-
+	service := ConnectToAuthService(&Context{}, "")
 	if _, ok := service.(NullAuthService); !ok {
 		t.Errorf("Expected %#v to be a NullAuthService", service)
 	}
@@ -35,11 +31,7 @@ func TestCreateRemoteService(t *testing.T) {
 	authSetup()
 	defer authTeardown()
 
-	service, err := ConnectToAuthService(&Context{}, server.URL)
-	if err != nil {
-		t.Fatalf("Unexpect error connecting to auth service: %v", err)
-	}
-
+	service := ConnectToAuthService(&Context{}, server.URL)
 	if _, ok := service.(RemoteAuthService); !ok {
 		t.Errorf("Expected %#v to be a RemoteAuthService", service)
 	}
@@ -73,11 +65,7 @@ func TestSuccessfulRemoteAuth(t *testing.T) {
 	})
 
 	c := &Context{HTTPS: http.DefaultClient}
-
-	service, err := ConnectToAuthService(c, server.URL)
-	if err != nil {
-		t.Fatalf("Unexpect error connecting to auth service: %v", err)
-	}
+	service := ConnectToAuthService(c, server.URL)
 
 	ok, err := service.Validate("someuser", "1234567")
 	if err != nil {
@@ -104,11 +92,7 @@ func TestUnsuccessfulRemoteAuth(t *testing.T) {
 	})
 
 	c := &Context{HTTPS: http.DefaultClient}
-
-	service, err := ConnectToAuthService(c, server.URL)
-	if err != nil {
-		t.Fatalf("Unexpect error connecting to auth service: %v", err)
-	}
+	service := ConnectToAuthService(c, server.URL)
 
 	ok, err := service.Validate("someuser", "1234567")
 	if err != nil {

@@ -81,7 +81,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 		t.Errorf("Unexpected administrator API key: [%s]", c.AdminKey)
 	}
 
-	if c.AuthService != "https://auth" {
+	if c.Settings.AuthService != "https://auth" {
 		t.Errorf("Unexpected authentication service URL: [%s]", c.AuthService)
 	}
 }
@@ -161,7 +161,7 @@ func TestDefaultValues(t *testing.T) {
 		t.Errorf("Unexpected default image: [%s]", c.Image)
 	}
 
-	if c.AuthService != "" {
+	if c.Settings.AuthService != "" {
 		t.Errorf("Unexpected default auth service: [%s]", c.AuthService)
 	}
 }
