@@ -17,11 +17,16 @@ import (
 
 // Context provides shared state among individual route handlers.
 type Context struct {
+	// Configuration settings from the environment.
 	Settings
+
+	// Service facades.
 	Storage
 	Docker
 
-	HTTPS *http.Client
+	// Shared clients.
+	HTTPS       *http.Client
+	AuthService AuthService
 }
 
 // Settings contains configuration options loaded from the environment.
@@ -78,6 +83,7 @@ func NewContext() (*Context, error) {
 		"key":                c.Key,
 		"default layer":      c.Image,
 		"polling interval":   c.Poll,
+		"auth service":       c.AuthService,
 	}).Info("Initializing with loaded settings.")
 
 	// Configure a HTTP(S) client to use the provided TLS credentials.
@@ -136,6 +142,9 @@ func NewContext() (*Context, error) {
 			return c, err
 		}
 	}
+
+	// Initialize an appropriate authentication service.
+	c.AuthService = ConnectToAuthService(c, c.Settings.AuthService)
 
 	return c, nil
 }

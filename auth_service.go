@@ -18,9 +18,9 @@ type AuthService interface {
 
 // ConnectToAuthService initializes an appropriate AuthService implementation based on a (possibly
 // omitted) service address.
-func ConnectToAuthService(c *Context, address string) (AuthService, error) {
+func ConnectToAuthService(c *Context, address string) AuthService {
 	if address == "" {
-		return NullAuthService{}, nil
+		return NullAuthService{}
 	}
 
 	if !strings.HasPrefix(address, "https://") {
@@ -36,7 +36,7 @@ func ConnectToAuthService(c *Context, address string) (AuthService, error) {
 	return RemoteAuthService{
 		HTTPS:       c.HTTPS,
 		ValidateURL: address + "validate",
-	}, nil
+	}
 }
 
 // RemoteAuthService is an auth service that's implemented by calls to an HTTPS remote API.
