@@ -83,7 +83,7 @@ func NewContext() (*Context, error) {
 		"key":                c.Key,
 		"default layer":      c.Image,
 		"polling interval":   c.Poll,
-		"auth service":       c.AuthService,
+		"auth service":       c.Settings.AuthService,
 	}).Info("Initializing with loaded settings.")
 
 	// Configure a HTTP(S) client to use the provided TLS credentials.
