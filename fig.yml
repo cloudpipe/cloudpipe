@@ -8,6 +8,9 @@ cloudpipe:
     PIPE_ADMINKEY: 12345
     PIPE_LOGLEVEL: debug
     PIPE_LOGCOLORS: true
+    PIPE_CACERT: ${PWD}/certificates/ca.pem
+    PIPE_CERT: ${PWD}/certificates/cloudpipe-cert.pem
+    PIPE_KEY: ${PWD}/certificates/cloudpipe-key.pem
   ports:
   - "8000:8000"
   volumes:
