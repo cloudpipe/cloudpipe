@@ -15,7 +15,7 @@ func AuthDiscoverHandler(c *Context, w http.ResponseWriter, r *http.Request) {
 
 	resp := response{
 		Address: c.Settings.AuthService,
-		Style:   "local",
+		Style:   c.AuthService.Style(),
 	}
 
 	json.NewEncoder(w).Encode(resp)
