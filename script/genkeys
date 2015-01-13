@@ -41,11 +41,18 @@ echo "<< certificate authority generated."
 keypair() {
   local NAME=$1
   local HOSTNAME=$2
+  local CLIENT=$3
+
   local SERIALOPT="-CAserial /certificates/ca.srl"
+  local EXTOPT=""
 
   if [ "${FIRSTCERT}" = "true" ]; then
     SERIALOPT="-CAcreateserial"
     FIRSTCERT="false"
+  fi
+
+  if [ "${CLIENT}" = "true" ]; then
+    EXTOPT="-extfile /certificates/extclient.cnf"
   fi
 
   echo ">> generating a keypair for: ${NAME}"
@@ -70,13 +77,14 @@ keypair() {
     -CA /certificates/ca.pem \
     -CAkey /certificates/ca-key.pem \
     ${SERIALOPT} \
+    ${EXTOPT} \
     -out /certificates/${NAME}-cert.pem
 
   echo "<< ${NAME} keypair generated."
 }
 
 # Keypair for the API and job runner.
-keypair cloudpipe cloudpipe
+keypair cloudpipe cloudpipe "true"
 
 # Keypair for the authentication server.
-keypair auth-local auth
+keypair auth-local auth "false"
