@@ -80,6 +80,12 @@ keypair() {
     ${EXTOPT} \
     -out /certificates/${NAME}-cert.pem
 
+  echo ".. removing key password"
+  ${OPENSSL} openssl rsa \
+    -passin ${PASSOPT} \
+    -in /certificates/${NAME}-key.pem \
+    -out /certificates/${NAME}-key.pem
+
   echo "<< ${NAME} keypair generated."
 }
 
