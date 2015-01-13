@@ -49,7 +49,8 @@ func TestDiscoverRemoteAuthService(t *testing.T) {
 	c := &Context{
 		Settings: Settings{AuthService: "https://somewhere.com/"},
 		AuthService: RemoteAuthService{
-			ValidateURL: "https://somewhere.com/validate",
+			ValidateURL:   "https://somewhere.com/validate",
+			ReportedStyle: "cheese",
 		},
 	}
 
@@ -71,7 +72,7 @@ func TestDiscoverRemoteAuthService(t *testing.T) {
 	if response.Address != "https://somewhere.com/" {
 		t.Errorf("Unexpected auth service address: %s", response.Address)
 	}
-	if response.Style != "local" {
+	if response.Style != "cheese" {
 		t.Errorf("Unexpected auth service style: %s", response.Style)
 	}
 }

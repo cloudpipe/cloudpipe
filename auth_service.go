@@ -22,9 +22,9 @@ type AuthService interface {
 
 // ConnectToAuthService initializes an appropriate AuthService implementation based on a (possibly
 // omitted) service address.
-func ConnectToAuthService(c *Context, address string) AuthService {
+func ConnectToAuthService(c *Context, address string) (AuthService, error) {
 	if address == "" {
-		return NullAuthService{}
+		return NullAuthService{}, nil
 	}
 
 	if !strings.HasPrefix(address, "https://") {
@@ -37,16 +37,34 @@ func ConnectToAuthService(c *Context, address string) AuthService {
 		address = address + "/"
 	}
 
-	return RemoteAuthService{
-		HTTPS:       c.HTTPS,
-		ValidateURL: address + "validate",
+	req, err := http.NewRequest("GET", address, nil)
+	if err != nil {
+		return nil, err
 	}
+	req.Header.Set("Content-Type", "text/plain")
+	resp, err := c.HTTPS.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	rawStyle, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	style := strings.TrimSpace(string(rawStyle))
+
+	return RemoteAuthService{
+		HTTPS:         c.HTTPS,
+		ReportedStyle: style,
+		ValidateURL:   address + "validate",
+	}, nil
 }
 
 // RemoteAuthService is an auth service that's implemented by calls to an HTTPS remote API.
 type RemoteAuthService struct {
-	HTTPS       *http.Client
-	ValidateURL string
+	HTTPS         *http.Client
+	ReportedStyle string
+	ValidateURL   string
 }
 
 // Validate sends a request to the configured authentication service to determine whether or not
@@ -81,7 +99,7 @@ func (service RemoteAuthService) Validate(accountName, apiKey string) (bool, err
 // Style provides a hint to external API consumers about other calls and capabilities that this
 // authentication service may implement.
 func (service RemoteAuthService) Style() string {
-	return "local"
+	return service.ReportedStyle
 }
 
 // NullAuthService is an AuthService implementation that refuses all users and provides no optional

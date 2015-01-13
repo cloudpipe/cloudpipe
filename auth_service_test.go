@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,7 +22,10 @@ func authTeardown() {
 }
 
 func TestDefaultToNullService(t *testing.T) {
-	service := ConnectToAuthService(&Context{}, "")
+	service, err := ConnectToAuthService(&Context{}, "")
+	if err != nil {
+		t.Fatalf("Unexpected error connection to authentication service: %v", err)
+	}
 	if _, ok := service.(NullAuthService); !ok {
 		t.Errorf("Expected %#v to be a NullAuthService", service)
 	}
@@ -31,7 +35,14 @@ func TestCreateRemoteService(t *testing.T) {
 	authSetup()
 	defer authTeardown()
 
-	service := ConnectToAuthService(&Context{}, server.URL)
+	mux.HandleFunc("/style", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "unit-test")
+	})
+
+	service, err := ConnectToAuthService(&Context{HTTPS: http.DefaultClient}, server.URL)
+	if err != nil {
+		t.Fatalf("Unexpected error connection to authentication service: %v", err)
+	}
 	if _, ok := service.(RemoteAuthService); !ok {
 		t.Errorf("Expected %#v to be a RemoteAuthService", service)
 	}
@@ -40,6 +51,10 @@ func TestCreateRemoteService(t *testing.T) {
 func TestSuccessfulRemoteAuth(t *testing.T) {
 	authSetup()
 	defer authTeardown()
+
+	mux.HandleFunc("/style", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "unit-test")
+	})
 
 	hit := false
 	mux.HandleFunc("/validate", func(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +80,10 @@ func TestSuccessfulRemoteAuth(t *testing.T) {
 	})
 
 	c := &Context{HTTPS: http.DefaultClient}
-	service := ConnectToAuthService(c, server.URL)
+	service, err := ConnectToAuthService(c, server.URL)
+	if err != nil {
+		t.Fatalf("Unexpected error connection to auth service: %v", err)
+	}
 
 	ok, err := service.Validate("someuser", "1234567")
 	if err != nil {
@@ -85,6 +103,10 @@ func TestUnsuccessfulRemoteAuth(t *testing.T) {
 	authSetup()
 	defer authTeardown()
 
+	mux.HandleFunc("/style", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "unit-test")
+	})
+
 	hit := false
 	mux.HandleFunc("/validate", func(w http.ResponseWriter, r *http.Request) {
 		hit = true
@@ -92,7 +114,10 @@ func TestUnsuccessfulRemoteAuth(t *testing.T) {
 	})
 
 	c := &Context{HTTPS: http.DefaultClient}
-	service := ConnectToAuthService(c, server.URL)
+	service, err := ConnectToAuthService(c, server.URL)
+	if err != nil {
+		t.Fatalf("Unexpected error connection to auth service: %v", err)
+	}
 
 	ok, err := service.Validate("someuser", "1234567")
 	if err != nil {

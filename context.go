@@ -138,13 +138,20 @@ func NewContext() (*Context, error) {
 			log.WithFields(log.Fields{
 				"docker host": c.DockerHost,
 				"error":       err,
-			}).Fatal("Unable to connect to Docker.")
+			}).Error("Unable to connect to Docker.")
 			return c, err
 		}
 	}
 
 	// Initialize an appropriate authentication service.
-	c.AuthService = ConnectToAuthService(c, c.Settings.AuthService)
+	c.AuthService, err = ConnectToAuthService(c, c.Settings.AuthService)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"auth service url": c.Settings.AuthService,
+			"error":            err,
+		}).Error("Unable to connect to authentication service.")
+		return c, err
+	}
 
 	return c, nil
 }
