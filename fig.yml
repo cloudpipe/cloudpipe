@@ -8,13 +8,14 @@ cloudpipe:
     PIPE_ADMINKEY: 12345
     PIPE_LOGLEVEL: debug
     PIPE_LOGCOLORS: true
-    PIPE_CACERT: ${PWD}/certificates/ca.pem
-    PIPE_CERT: ${PWD}/certificates/cloudpipe-cert.pem
-    PIPE_KEY: ${PWD}/certificates/cloudpipe-key.pem
+    PIPE_CACERT: /certificates/ca.pem
+    PIPE_CERT: /certificates/cloudpipe-cert.pem
+    PIPE_KEY: /certificates/cloudpipe-key.pem
   ports:
   - "8000:8000"
   volumes:
   - "/var/run/docker.sock:/var/run/docker.sock"
+  - "certificates:/certificates"
 mongo:
   image: mongo:2.8
 dummyuserimage:
