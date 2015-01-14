@@ -22,3 +22,9 @@ _testmain.go
 *.exe
 *.test
 *.prof
+
+# locally-generated development certificates
+certificates/*.pem
+certificates/*.csr
+certificates/*.srl
+certificates/*.password

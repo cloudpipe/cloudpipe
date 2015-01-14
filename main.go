@@ -24,6 +24,8 @@ func main() {
 	go Runner(c)
 
 	// v1 routes
+	http.HandleFunc("/v1/auth_service", BindContext(c, AuthDiscoverHandler))
+
 	http.HandleFunc("/v1/job", BindContext(c, JobHandler))
 	http.HandleFunc("/v1/job/kill", BindContext(c, JobKillHandler))
 	http.HandleFunc("/v1/job/kill_all", BindContext(c, JobKillAllHandler))

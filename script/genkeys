@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+#
+# Generate a set of TLS credentials that can be used to run development mode.
+
+set -o errexit
+
+ROOT=$(cd $(dirname $0)/..; pwd)
+
+OPENSSL="docker run --volume ${ROOT}/certificates:/certificates --rm smashwilson/openssl"
+
+FIRSTCERT="true"
+PASSFILE="${ROOT}/certificates/dev.password"
+PASSOPT="file:/certificates/dev.password"
+
+# Randomly create a password file, if you haven't supplied one already.
+# For development mode, we'll just use the same (random) password for everything.
+if [ ! -f "${PASSFILE}" ]; then
+  echo ">> creating a random password in ${PASSFILE}."
+  touch ${PASSFILE}
+  chmod 600 ${PASSFILE}
+  # "If the same pathname argument is supplied to -passin and -passout arguments then the first
+  # line will be used for the input password and the next line for the output password."
+  cat /dev/random | head -c 128 | base64 | sed -n '{p;p;}' >> ${PASSFILE}
+  echo "<< random password created"
+fi
+
+# Generate the certificate authority that we'll use as the root for all the things.
+echo ">> generating a certificate authority"
+${OPENSSL} openssl genrsa -des3 \
+  -passout ${PASSOPT} \
+  -out /certificates/ca-key.pem 2048
+${OPENSSL} openssl req -new -x509 -days 365 \
+  -batch \
+  -passin ${PASSOPT} \
+  -key /certificates/ca-key.pem \
+  -passout ${PASSOPT} \
+  -out /certificates/ca.pem
+echo "<< certificate authority generated."
+
+# Generate a named keypair
+keypair() {
+  local NAME=$1
+  local HOSTNAME=$2
+  local CLIENT=$3
+
+  local SERIALOPT="-CAserial /certificates/ca.srl"
+  local EXTOPT=""
+
+  if [ "${FIRSTCERT}" = "true" ]; then
+    SERIALOPT="-CAcreateserial"
+    FIRSTCERT="false"
+  fi
+
+  if [ "${CLIENT}" = "true" ]; then
+    EXTOPT="-extfile /certificates/extclient.cnf"
+  fi
+
+  echo ">> generating a keypair for: ${NAME}"
+
+  echo ".. key"
+  ${OPENSSL} openssl genrsa -des3 \
+    -passout ${PASSOPT} \
+    -out /certificates/${NAME}-key.pem 2048
+
+  echo ".. request"
+  ${OPENSSL} openssl req -subj "/CN=${HOSTNAME}" -new \
+    -batch \
+    -passin ${PASSOPT} \
+    -key /certificates/${NAME}-key.pem \
+    -passout ${PASSOPT} \
+    -out /certificates/${NAME}-req.csr
+
+  echo ".. certificate"
+  ${OPENSSL} openssl x509 -req -days 365 \
+    -passin ${PASSOPT} \
+    -in /certificates/${NAME}-req.csr \
+    -CA /certificates/ca.pem \
+    -CAkey /certificates/ca-key.pem \
+    ${SERIALOPT} \
+    ${EXTOPT} \
+    -out /certificates/${NAME}-cert.pem
+
+  echo ".. removing key password"
+  ${OPENSSL} openssl rsa \
+    -passin ${PASSOPT} \
+    -in /certificates/${NAME}-key.pem \
+    -out /certificates/${NAME}-key.pem
+
+  echo "<< ${NAME} keypair generated."
+}
+
+# Keypair for the API and job runner.
+keypair cloudpipe cloudpipe "true"
+
+# Keypair for the authentication server.
+keypair auth-store authstore "false"

@@ -6,6 +6,20 @@ import (
 	"testing"
 )
 
+// TrustingAuthService accepts all usernames and tokens.
+type TrustingAuthService struct{}
+
+// Validate always returns true.
+func (service TrustingAuthService) Validate(username, token string) (bool, error) {
+	return true, nil
+}
+
+// Style yells at you for using this in production somehow, even though it's only defined for
+// tests.
+func (service TrustingAuthService) Style() string {
+	return "what are you, nuts"
+}
+
 func setupAuthRecorder(t *testing.T, username, key string) (*http.Request, *httptest.ResponseRecorder) {
 	r, err := http.NewRequest("GET", "https://localhost/v1/jobs", nil)
 	if err != nil {
@@ -21,7 +35,8 @@ func setupAuthRecorder(t *testing.T, username, key string) (*http.Request, *http
 func TestAuthenticateMissingCredentials(t *testing.T) {
 	r, w := setupAuthRecorder(t, "", "")
 	c := &Context{
-		Storage: NullStorage{},
+		Storage:     NullStorage{},
+		AuthService: NullAuthService{},
 	}
 
 	_, err := Authenticate(c, w, r)
@@ -43,7 +58,8 @@ func TestAuthenticateAdminCredentials(t *testing.T) {
 			AdminName: "admin",
 			AdminKey:  "12345edcba",
 		},
-		Storage: NullStorage{},
+		Storage:     NullStorage{},
+		AuthService: NullAuthService{},
 	}
 
 	a, err := Authenticate(c, w, r)
@@ -62,7 +78,8 @@ func TestAuthenticateAdminCredentials(t *testing.T) {
 func TestAuthenticateUnknownAccount(t *testing.T) {
 	r, w := setupAuthRecorder(t, "wrong", "1234512345")
 	c := &Context{
-		Storage: NullStorage{},
+		Storage:     NullStorage{},
+		AuthService: NullAuthService{},
 	}
 
 	_, err := Authenticate(c, w, r)
@@ -75,4 +92,24 @@ func TestAuthenticateUnknownAccount(t *testing.T) {
 		Message: "Unable to authenticate account [wrong]",
 		Retry:   false,
 	})
+}
+
+func TestAuthenticateNonAdminAccount(t *testing.T) {
+	r, w := setupAuthRecorder(t, "nonadmin", "1234512345")
+	c := &Context{
+		Storage:     NullStorage{},
+		AuthService: TrustingAuthService{},
+	}
+
+	a, err := Authenticate(c, w, r)
+	if err != nil {
+		t.Errorf("Unable to authenticate: %v", err)
+	}
+
+	if a.Name != "nonadmin" {
+		t.Errorf("Unexpected account name: %s", a.Name)
+	}
+	if a.Admin {
+		t.Errorf("Expected account not to be an administrator")
+	}
 }

@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"os/user"
 	"path"
@@ -13,25 +17,34 @@ import (
 
 // Context provides shared state among individual route handlers.
 type Context struct {
+	// Configuration settings from the environment.
 	Settings
+
+	// Service facades.
 	Storage
 	Docker
+
+	// Shared clients.
+	HTTPS       *http.Client
+	AuthService AuthService
 }
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
-	Port         int
-	LogLevel     string
-	MongoURL     string
-	AdminName    string
-	AdminKey     string
-	DockerHost   string
-	DockerTLS    bool
-	DockerCACert string
-	DockerCert   string
-	DockerKey    string
-	Image        string
-	Poll         int
+	Port        int
+	LogLevel    string
+	LogColors   bool
+	MongoURL    string
+	AdminName   string
+	AdminKey    string
+	DockerHost  string
+	DockerTLS   bool
+	CACert      string
+	Cert        string
+	Key         string
+	Image       string
+	Poll        int
+	AuthService string
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -43,29 +56,61 @@ func NewContext() (*Context, error) {
 		return c, err
 	}
 
-	// Summarize the loaded settings.
-
-	log.WithFields(log.Fields{
-		"port":               c.Port,
-		"logging level":      c.LogLevel,
-		"mongo URL":          c.MongoURL,
-		"admin account":      c.AdminName,
-		"docker host":        c.DockerHost,
-		"docker TLS enabled": c.DockerTLS,
-		"docker CA cert":     c.DockerCACert,
-		"docker cert":        c.DockerCert,
-		"docker key":         c.DockerKey,
-		"default layer":      c.Image,
-		"polling interval":   c.Poll,
-	}).Info("Initializing with loaded settings.")
-
-	// Configure the logging level.
+	// Configure the logging level and formatter.
 
 	level, err := log.ParseLevel(c.LogLevel)
 	if err != nil {
 		return c, err
 	}
 	log.SetLevel(level)
+
+	log.SetFormatter(&log.TextFormatter{
+		ForceColors: c.LogColors,
+	})
+
+	// Summarize the loaded settings.
+
+	log.WithFields(log.Fields{
+		"port":               c.Port,
+		"logging level":      c.LogLevel,
+		"log with color":     c.LogColors,
+		"mongo URL":          c.MongoURL,
+		"admin account":      c.AdminName,
+		"docker host":        c.DockerHost,
+		"docker TLS enabled": c.DockerTLS,
+		"CA cert":            c.CACert,
+		"cert":               c.Cert,
+		"key":                c.Key,
+		"default layer":      c.Image,
+		"polling interval":   c.Poll,
+		"auth service":       c.Settings.AuthService,
+	}).Info("Initializing with loaded settings.")
+
+	// Configure a HTTP(S) client to use the provided TLS credentials.
+
+	caCertPool := x509.NewCertPool()
+
+	caCertPEM, err := ioutil.ReadFile(c.CACert)
+	if err != nil {
+		log.Debug("Hint: if you're running in dev mode, try running script/genkeys first.")
+		return nil, fmt.Errorf("unable to load CA certificate: %v", err)
+	}
+	caCertPool.AppendCertsFromPEM(caCertPEM)
+
+	keypair, err := tls.LoadX509KeyPair(c.Cert, c.Key)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load TLS keypair: %v", err)
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:            caCertPool,
+		Certificates:       []tls.Certificate{keypair},
+		MinVersion:         tls.VersionTLS10,
+		InsecureSkipVerify: false,
+	}
+
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
+	c.HTTPS = &http.Client{Transport: transport}
 
 	// Connect to MongoDB.
 
@@ -80,13 +125,10 @@ func NewContext() (*Context, error) {
 	// Connect to Docker.
 
 	if c.DockerTLS {
-		c.Docker, err = docker.NewTLSClient(c.DockerHost, c.DockerCert, c.DockerKey, c.DockerCACert)
+		c.Docker, err = docker.NewTLSClient(c.DockerHost, c.Cert, c.Key, c.CACert)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"docker host":    c.DockerHost,
-				"docker cert":    c.DockerCert,
-				"docker key":     c.DockerKey,
-				"docker CA cert": c.DockerCACert,
+				"docker host": c.DockerHost,
 			}).Fatal("Unable to connect to Docker with TLS.")
 			return c, err
 		}
@@ -96,9 +138,19 @@ func NewContext() (*Context, error) {
 			log.WithFields(log.Fields{
 				"docker host": c.DockerHost,
 				"error":       err,
-			}).Fatal("Unable to connect to Docker.")
+			}).Error("Unable to connect to Docker.")
 			return c, err
 		}
+	}
+
+	// Initialize an appropriate authentication service.
+	c.AuthService, err = ConnectToAuthService(c, c.Settings.AuthService)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"auth service url": c.Settings.AuthService,
+			"error":            err,
+		}).Error("Unable to connect to authentication service.")
+		return c, err
 	}
 
 	return c, nil
@@ -144,16 +196,16 @@ func (c *Context) Load() error {
 		certRoot = path.Join(user.HomeDir, ".docker")
 	}
 
-	if c.DockerCACert == "" {
-		c.DockerCACert = path.Join(certRoot, "ca.pem")
+	if c.CACert == "" {
+		c.CACert = path.Join(certRoot, "ca.pem")
 	}
 
-	if c.DockerCert == "" {
-		c.DockerCert = path.Join(certRoot, "cert.pem")
+	if c.Cert == "" {
+		c.Cert = path.Join(certRoot, "cert.pem")
 	}
 
-	if c.DockerKey == "" {
-		c.DockerKey = path.Join(certRoot, "key.pem")
+	if c.Key == "" {
+		c.Key = path.Join(certRoot, "key.pem")
 	}
 
 	if c.Image == "" {

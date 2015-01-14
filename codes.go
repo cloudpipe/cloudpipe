@@ -3,11 +3,15 @@ package main
 const (
 	// CodeWTF is returned when an invariant turns out not to be true.
 	CodeWTF = "WTF"
+	// CodeStorageError means that there was an error interacting with the storage layer.
+	CodeStorageError = "STORE"
 
 	// CodeCredentialsMissing means a request that was required to be authenticated had no auth data.
 	CodeCredentialsMissing = "ANONE"
 	// CodeCredentialsIncorrect means auth data on a request was present, but incorrect.
 	CodeCredentialsIncorrect = "AFAIL"
+	// CodeAuthServiceConnection means the auth service could not be reached.
+	CodeAuthServiceConnection = "ACONN"
 
 	// CodeMethodNotSupported means a request was made against a resource with an unsupported method.
 	CodeMethodNotSupported = "MINVAL"

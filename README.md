@@ -9,7 +9,8 @@ Compute on demand in Docker containers.
 
  1. Install [Docker](https://docs.docker.com/installation/mac/) on your platform.
  2. Install [fig](http://www.fig.sh/install.html).
- 3. Run `fig build && fig up -d` to build and launch everything locally.
+ 3. Generate development TLS credentials by running `script/genkeys`.
+ 4. Run `fig build && fig up -d` to build and launch everything locally.
 
 To run the tests, use `script/test`. You can also use `script/mongo` to connect to your local MongoDB
 database.
@@ -26,7 +27,7 @@ Configure the client to connect to yours (default settings from fig shown here):
 
 ```
 >>> import multyvac
->>> api_url = 'http://{}/v1'.format(<your_ip_endpoint>) 
+>>> api_url = 'http://{}/v1'.format(<your_ip_endpoint>)
 >>> multyvac.config.set_key(api_key='admin',
 ...                         api_secret_key='12345',
 ...                         api_url=api_url)
