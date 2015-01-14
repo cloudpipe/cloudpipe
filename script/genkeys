@@ -93,4 +93,4 @@ keypair() {
 keypair cloudpipe cloudpipe "true"
 
 # Keypair for the authentication server.
-keypair auth-local auth "false"
+keypair auth-store auth "false"
