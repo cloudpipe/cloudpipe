@@ -2,8 +2,6 @@ package main
 
 import (
 	"os"
-	"os/user"
-	"path"
 	"testing"
 )
 
@@ -107,12 +105,6 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("PIPE_IMAGE", "")
 	os.Setenv("PIPE_AUTHSERVICE", "")
 
-	u, err := user.Current()
-	if err != nil {
-		t.Errorf("Unable to identify current user: %v", err)
-	}
-	home := u.HomeDir
-
 	if err := c.Load(); err != nil {
 		t.Errorf("Error loading configuration: %v", err)
 	}
@@ -145,15 +137,15 @@ func TestDefaultValues(t *testing.T) {
 		t.Errorf("Expected docker TLS to be disabled.")
 	}
 
-	if c.CACert != path.Join(home, ".docker", "ca.pem") {
+	if c.CACert != "/certificates/ca.pem" {
 		t.Errorf("Unexpected docker CA cert: [%s]", c.CACert)
 	}
 
-	if c.Cert != path.Join(home, ".docker", "cert.pem") {
+	if c.Cert != "/certificates/cloudpipe-cert.pem" {
 		t.Errorf("Unexpected docker cert: [%s]", c.Cert)
 	}
 
-	if c.Key != path.Join(home, ".docker", "key.pem") {
+	if c.Key != "/certificates/cloudpipe-key.pem" {
 		t.Errorf("Unexpected docker key: [%s]", c.Key)
 	}
 
@@ -161,7 +153,7 @@ func TestDefaultValues(t *testing.T) {
 		t.Errorf("Unexpected default image: [%s]", c.Image)
 	}
 
-	if c.Settings.AuthService != "" {
+	if c.Settings.AuthService != "https://authstore:9001/v1" {
 		t.Errorf("Unexpected default auth service: [%s]", c.AuthService)
 	}
 }
