@@ -12,7 +12,7 @@ cloudpipe:
     PIPE_CACERT: /certificates/ca.pem
     PIPE_CERT: /certificates/cloudpipe-cert.pem
     PIPE_KEY: /certificates/cloudpipe-key.pem
-    PIPE_AUTHSERVICE: https://authstore:8000/v1
+    PIPE_AUTHSERVICE: https://authstore:9001/v1
   ports:
   - "8000:8000"
   volumes:
