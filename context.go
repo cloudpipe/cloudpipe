@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/user"
 	"path"
 
 	log "github.com/Sirupsen/logrus"
@@ -188,12 +187,7 @@ func (c *Context) Load() error {
 
 	certRoot := os.Getenv("DOCKER_CERT_PATH")
 	if certRoot == "" {
-		user, err := user.Current()
-		if err != nil {
-			return fmt.Errorf("Unable to read the current OS user: %v", err)
-		}
-
-		certRoot = path.Join(user.HomeDir, ".docker")
+		certRoot = "/certificates"
 	}
 
 	if c.CACert == "" {
@@ -201,15 +195,19 @@ func (c *Context) Load() error {
 	}
 
 	if c.Cert == "" {
-		c.Cert = path.Join(certRoot, "cert.pem")
+		c.Cert = path.Join(certRoot, "cloudpipe-cert.pem")
 	}
 
 	if c.Key == "" {
-		c.Key = path.Join(certRoot, "key.pem")
+		c.Key = path.Join(certRoot, "cloudpipe-key.pem")
 	}
 
 	if c.Image == "" {
 		c.Image = "cloudpipe/runner-py2"
+	}
+
+	if c.Settings.AuthService == "" {
+		c.Settings.AuthService = "https://authstore:9001/v1"
 	}
 
 	if _, err := log.ParseLevel(c.LogLevel); err != nil {
