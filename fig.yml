@@ -25,11 +25,15 @@ authstore:
   environment:
     AUTH_LOGLEVEL: debug
     AUTH_LOGCOLORS: true
-    AUTH_CACERT: /certificates/ca.pem
-    AUTH_CERT: /certificates/auth-store-cert.pem
-    AUTH_KEY: /certificates/auth-store-key.pem
+    AUTH_INTERNALCACERT: /certificates/ca.pem
+    AUTH_INTERNALCERT: /certificates/auth-store-cert.pem
+    AUTH_INTERNALKEY: /certificates/auth-store-key.pem
+    AUTH_EXTERNALCERT: /certificates/external-cert.pem
+    AUTH_EXTERNALKEY: /certificates/external-key.pem
+  expose:
+  - "9001"
   ports:
-  - "8001:8000"
+  - "9000:9000"
   volumes:
   - "certificates:/certificates"
 mongo:
