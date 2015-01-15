@@ -37,7 +37,8 @@ ${OPENSSL} openssl req -new -x509 -days 365 \
   -out /certificates/ca.pem
 echo "<< certificate authority generated."
 
-# Generate a named keypair
+# Generate a named keypair that's signed by the certificate authority. These should be used for
+# internal communications.
 keypair() {
   local NAME=$1
   local HOSTNAME=$2
@@ -89,8 +90,23 @@ keypair() {
   echo "<< ${NAME} keypair generated."
 }
 
+# Generate an independent, self-signed keypair that isn't related to the certificate authority, to
+# be used for externally facing SSL endpoints.
+selfsigned() {
+  local NAME=$1
+
+  echo ">> generating keypair for ${NAME}"
+  ${OPENSSL} openssl req -x509 -newkey rsa:2048 -days 365 -nodes -batch \
+    -keyout /certificates/${NAME}-key.pem \
+    -out /certificates/${NAME}-cert.pem
+  echo "<< keypair generated for ${NAME}"
+}
+
 # Keypair for the API and job runner.
 keypair cloudpipe cloudpipe "true"
 
 # Keypair for the authentication server.
 keypair auth-store authstore "false"
+
+# Self-signed, independent keypair to be used by externally accessible endpoints.
+selfsigned external
