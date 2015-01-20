@@ -28,3 +28,6 @@ certificates/*.pem
 certificates/*.csr
 certificates/*.srl
 certificates/*.password
+
+# Godeps vendorizing
+Godeps/_workspace
