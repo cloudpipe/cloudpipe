@@ -3,6 +3,8 @@ Cloud Pipe
 
 Compute on demand in Docker containers.
 
+Watch the [CloudPipe Prototype Demo](https://www.youtube.com/watch?v=AGeALpR6DVc)
+
 [![Build Status](https://travis-ci.org/cloudpipe/cloudpipe.svg?branch=master)](https://travis-ci.org/cloudpipe/cloudpipe)
 
 ## Getting Started
