@@ -27,7 +27,7 @@ _testmain.go
 certificates/*.pem
 certificates/*.csr
 certificates/*.srl
-certificates/*.password
+certificates/password
 
 # Godeps vendorizing
 Godeps/_workspace
