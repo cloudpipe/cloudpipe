@@ -137,10 +137,15 @@ func Execute(c *Context, job *SubmittedJob) {
 	job.StartedAt = StoreTime(time.Now())
 	job.QueueDelay = job.StartedAt.AsTime().Sub(job.CreatedAt.AsTime()).Nanoseconds()
 
+	image := c.DefaultImage
+	if len(job.Layers) != 0 {
+		image = job.Layers[0].Name
+	}
+
 	container, err := c.CreateContainer(docker.CreateContainerOptions{
 		Name: job.ContainerName(),
 		Config: &docker.Config{
-			Image:     c.DefaultImage,
+			Image:     image,
 			Cmd:       []string{"/bin/bash", "-c", job.Command},
 			OpenStdin: true,
 			StdinOnce: true,
