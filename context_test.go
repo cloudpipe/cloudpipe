@@ -67,8 +67,8 @@ func TestLoadFromEnvironment(t *testing.T) {
 		t.Errorf("Unexpected docker key: [%s]", c.Key)
 	}
 
-	if c.Image != "cloudpipe/runner-trial" {
-		t.Errorf("Unexpected image: [%s]", c.Image)
+	if c.DefaultImage != "cloudpipe/runner-trial" {
+		t.Errorf("Unexpected image: [%s]", c.DefaultImage)
 	}
 
 	if c.AdminName != "fake" {
