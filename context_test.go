@@ -68,7 +68,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	}
 
 	if c.DefaultImage != "cloudpipe/runner-trial" {
-		t.Errorf("Unexpected image: [%s]", c.DefaultImage)
+		t.Errorf("Unexpected default image: [%s]", c.DefaultImage)
 	}
 
 	if c.AdminName != "fake" {

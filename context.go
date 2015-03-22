@@ -80,7 +80,7 @@ func NewContext() (*Context, error) {
 		"CA cert":            c.CACert,
 		"cert":               c.Cert,
 		"key":                c.Key,
-		"default layer":      c.DefaultImage,
+		"default image":      c.DefaultImage,
 		"polling interval":   c.Poll,
 		"auth service":       c.Settings.AuthService,
 	}).Info("Initializing with loaded settings.")
