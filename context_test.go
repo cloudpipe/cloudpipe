@@ -15,7 +15,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("PIPE_ADMINNAME", "fake")
 	os.Setenv("PIPE_ADMINKEY", "12345")
 	os.Setenv("PIPE_POLL", "5000")
-	os.Setenv("PIPE_IMAGE", "cloudpipe/runner-py2")
+	os.Setenv("PIPE_IMAGE", "cloudpipe/runner-trial")
 	os.Setenv("PIPE_DOCKERHOST", "tcp://1.2.3.4:4567/")
 	os.Setenv("PIPE_DOCKERTLS", "true")
 	os.Setenv("PIPE_CACERT", "/lockbox/ca.pem")
@@ -67,7 +67,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 		t.Errorf("Unexpected docker key: [%s]", c.Key)
 	}
 
-	if c.Image != "cloudpipe/runner-py2" {
+	if c.Image != "cloudpipe/runner-trial" {
 		t.Errorf("Unexpected image: [%s]", c.Image)
 	}
 
