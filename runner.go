@@ -140,7 +140,7 @@ func Execute(c *Context, job *SubmittedJob) {
 	container, err := c.CreateContainer(docker.CreateContainerOptions{
 		Name: job.ContainerName(),
 		Config: &docker.Config{
-			Image:     c.Image,
+			Image:     c.DefaultImage,
 			Cmd:       []string{"/bin/bash", "-c", job.Command},
 			OpenStdin: true,
 			StdinOnce: true,
