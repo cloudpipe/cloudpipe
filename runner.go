@@ -140,6 +140,12 @@ func Execute(c *Context, job *SubmittedJob) {
 	image := c.DefaultImage
 	if len(job.Layers) != 0 {
 		image = job.Layers[0].Name
+		if len(job.Layers) > 1 {
+			log.WithFields(log.Fields{
+				"layers": job.Layers,
+			}).Warn("More than one layer used")
+		}
+
 	}
 
 	container, err := c.CreateContainer(docker.CreateContainerOptions{
