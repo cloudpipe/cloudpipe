@@ -5,6 +5,6 @@ set -e
 ROOT=$(dirname $0)/..
 cd ${ROOT}
 
-fig build >/dev/null 2>&1 || echo "fig build failed!"
+docker-compose build >/dev/null 2>&1 || echo "compose build failed!"
 
-exec fig run --no-deps --rm cloudpipe go test github.com/cloudpipe/cloudpipe/... $@
+exec docker-compose run --no-deps --rm cloudpipe go test github.com/cloudpipe/cloudpipe/... $@

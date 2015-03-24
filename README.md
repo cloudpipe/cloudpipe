@@ -10,9 +10,9 @@ Watch the [CloudPipe Prototype Demo](https://www.youtube.com/watch?v=AGeALpR6DVc
 ## Getting Started
 
  1. Install [Docker](https://docs.docker.com/installation/mac/) on your platform.
- 2. Install [fig](http://www.fig.sh/install.html).
+ 2. Install [compose](https://docs.docker.com/compose/install/).
  3. Generate development TLS credentials by running `script/genkeys`.
- 4. Run `fig build && fig up -d` to build and launch everything locally.
+ 4. Run `docker-compose build && docker-compose up -d` to build and launch everything locally.
 
 To run the tests, use `script/test`. You can also use `script/mongo` to connect to your local MongoDB
 database.
@@ -25,7 +25,7 @@ For this iteration, we've implemented (some of) [multyvac's API](http://docs.mul
 pip install multyvac
 ```
 
-Configure the client to connect to yours (default settings from fig shown here):
+Configure the client to connect to yours (default settings from compose shown here):
 
 ```
 >>> import multyvac
