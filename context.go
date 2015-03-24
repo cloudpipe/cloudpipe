@@ -30,20 +30,20 @@ type Context struct {
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
-	Port        int
-	LogLevel    string
-	LogColors   bool
-	MongoURL    string
-	AdminName   string
-	AdminKey    string
-	DockerHost  string
-	DockerTLS   bool
-	CACert      string
-	Cert        string
-	Key         string
-	Image       string
-	Poll        int
-	AuthService string
+	Port         int
+	LogLevel     string
+	LogColors    bool
+	MongoURL     string
+	AdminName    string
+	AdminKey     string
+	DockerHost   string
+	DockerTLS    bool
+	CACert       string
+	Cert         string
+	Key          string
+	DefaultImage string
+	Poll         int
+	AuthService  string
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the
@@ -80,7 +80,7 @@ func NewContext() (*Context, error) {
 		"CA cert":            c.CACert,
 		"cert":               c.Cert,
 		"key":                c.Key,
-		"default layer":      c.Image,
+		"default image":      c.DefaultImage,
 		"polling interval":   c.Poll,
 		"auth service":       c.Settings.AuthService,
 	}).Info("Initializing with loaded settings.")
@@ -202,8 +202,8 @@ func (c *Context) Load() error {
 		c.Key = path.Join(certRoot, "cloudpipe-key.pem")
 	}
 
-	if c.Image == "" {
-		c.Image = "cloudpipe/runner-py2"
+	if c.DefaultImage == "" {
+		c.DefaultImage = "cloudpipe/runner-py2"
 	}
 
 	if c.Settings.AuthService == "" {

@@ -15,7 +15,7 @@ func TestLoadFromEnvironment(t *testing.T) {
 	os.Setenv("PIPE_ADMINNAME", "fake")
 	os.Setenv("PIPE_ADMINKEY", "12345")
 	os.Setenv("PIPE_POLL", "5000")
-	os.Setenv("PIPE_IMAGE", "cloudpipe/runner-trial")
+	os.Setenv("PIPE_DEFAULTIMAGE", "cloudpipe/runner-trial")
 	os.Setenv("PIPE_DOCKERHOST", "tcp://1.2.3.4:4567/")
 	os.Setenv("PIPE_DOCKERTLS", "true")
 	os.Setenv("PIPE_CACERT", "/lockbox/ca.pem")
@@ -67,8 +67,8 @@ func TestLoadFromEnvironment(t *testing.T) {
 		t.Errorf("Unexpected docker key: [%s]", c.Key)
 	}
 
-	if c.Image != "cloudpipe/runner-trial" {
-		t.Errorf("Unexpected image: [%s]", c.Image)
+	if c.DefaultImage != "cloudpipe/runner-trial" {
+		t.Errorf("Unexpected default image: [%s]", c.DefaultImage)
 	}
 
 	if c.AdminName != "fake" {
@@ -102,7 +102,7 @@ func TestDefaultValues(t *testing.T) {
 	os.Setenv("PIPE_KEY", "")
 	os.Setenv("DOCKER_TLS_VERIFY", "")
 	os.Setenv("DOCKER_CERT_PATH", "")
-	os.Setenv("PIPE_IMAGE", "")
+	os.Setenv("PIPE_DEFAULTIMAGE", "")
 	os.Setenv("PIPE_AUTHSERVICE", "")
 
 	if err := c.Load(); err != nil {
@@ -149,8 +149,8 @@ func TestDefaultValues(t *testing.T) {
 		t.Errorf("Unexpected docker key: [%s]", c.Key)
 	}
 
-	if c.Image != "cloudpipe/runner-py2" {
-		t.Errorf("Unexpected default image: [%s]", c.Image)
+	if c.DefaultImage != "cloudpipe/runner-py2" {
+		t.Errorf("Unexpected default image: [%s]", c.DefaultImage)
 	}
 
 	if c.Settings.AuthService != "https://authstore:9001/v1" {

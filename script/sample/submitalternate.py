@@ -16,6 +16,8 @@ multyvac.config.set_key(api_key='admin', api_secret_key='12345', api_url=api_url
 def add(a, b):
     return a + b
 
-jid = multyvac.submit(add, 3, 4)
-result = multyvac.get(jid).get_result()
-print("added {} and {} to get {}... in the cloud!".format(3,4,result))
+jid = multyvac.submit(add, 3, 4, _layer="ubuntu:14.04")
+job = multyvac.get(jid)
+job.wait()
+job = multyvac.get(jid)
+print("Job's stderr:\n\t{}".format(job.stderr)) # Says python is unavailable
