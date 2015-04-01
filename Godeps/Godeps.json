@@ -48,8 +48,8 @@
 			"Rev": "e9049346b6aae8e6ad500c5a4519ad029439d660"
 		},
 		{
-			"ImportPath": "github.com/smashwilson/go-dockerclient",
-			"Rev": "71b94ba6f7328eced58b7c21a2166da4d9cc864a"
+			"ImportPath": "github.com/fsouza/go-dockerclient",
+			"Rev": "ddb122d10f547ee6cfc4ea7debff407d80abdabc"
 		},
 		{
 			"ImportPath": "gopkg.in/mgo.v2",
