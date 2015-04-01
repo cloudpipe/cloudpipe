@@ -1,7 +1,7 @@
 package main
 
 import (
-	docker "github.com/smashwilson/go-dockerclient"
+	docker "github.com/fsouza/go-dockerclient"
 )
 
 // Docker enumerates interactions with the Docker client, allowing us to use alternate

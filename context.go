@@ -10,8 +10,8 @@ import (
 	"path"
 
 	log "github.com/Sirupsen/logrus"
+	docker "github.com/fsouza/go-dockerclient"
 	"github.com/kelseyhightower/envconfig"
-	docker "github.com/smashwilson/go-dockerclient"
 )
 
 // Context provides shared state among individual route handlers.
