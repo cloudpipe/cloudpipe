@@ -37,7 +37,7 @@ authstore:
   volumes:
   - "certificates:/certificates"
 mongo:
-  image: mongo:2.8
+  image: mongo:2.6
 dummyuserimage:
   image: cloudpipe/runner-py2
   command: "echo 'User image loaded'"
