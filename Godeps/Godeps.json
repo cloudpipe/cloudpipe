@@ -10,37 +10,37 @@
 		{
 			"ImportPath": "github.com/docker/docker/pkg/archive",
 			"Comment": "v1.3.0-866-g8dfcbf6",
-			"Rev": "8dfcbf62edb2853176eb3f5cf077dae68f2e85c3"
+			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/fileutils",
 			"Comment": "v1.3.0-866-g8dfcbf6",
-			"Rev": "8dfcbf62edb2853176eb3f5cf077dae68f2e85c3"
+			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/ioutils",
 			"Comment": "v1.3.0-866-g8dfcbf6",
-			"Rev": "8dfcbf62edb2853176eb3f5cf077dae68f2e85c3"
+			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/pools",
 			"Comment": "v1.3.0-866-g8dfcbf6",
-			"Rev": "8dfcbf62edb2853176eb3f5cf077dae68f2e85c3"
+			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/promise",
 			"Comment": "v1.3.0-866-g8dfcbf6",
-			"Rev": "8dfcbf62edb2853176eb3f5cf077dae68f2e85c3"
+			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/system",
 			"Comment": "v1.3.0-866-g8dfcbf6",
-			"Rev": "8dfcbf62edb2853176eb3f5cf077dae68f2e85c3"
+			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar",
 			"Comment": "v1.3.0-866-g8dfcbf6",
-			"Rev": "8dfcbf62edb2853176eb3f5cf077dae68f2e85c3"
+			"Rev": "a8a31eff10544860d2188dddabdee4d727545796"
 		},
 		{
 			"ImportPath": "github.com/kelseyhightower/envconfig",
