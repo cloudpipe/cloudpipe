@@ -218,13 +218,16 @@ func (storage *MongoStorage) UpdateJob(job *SubmittedJob) error {
 // GetAccount loads an account by its unique account name, creating it if it doesn't already exist.
 func (storage *MongoStorage) GetAccount(name string) (*Account, error) {
 	out := Account{Name: name}
-	_, err := storage.accounts().FindId(name).Apply(mgo.Change{
-		Update:    bson.M{"$setOnInsert": out},
-		Upsert:    true,
-		ReturnNew: true,
-	}, &out)
-	if err != nil {
+	var acct Account
+	err := storage.accounts().FindId(name).One(&acct)
+	if err != nil && err != mgo.ErrNotFound {
 		return nil, err
+	}
+	if err == mgo.ErrNotFound {
+		err = storage.accounts().Insert(out)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &out, nil
 }
