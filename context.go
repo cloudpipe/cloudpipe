@@ -30,20 +30,23 @@ type Context struct {
 
 // Settings contains configuration options loaded from the environment.
 type Settings struct {
-	Port         int
-	LogLevel     string
-	LogColors    bool
-	MongoURL     string
-	AdminName    string
-	AdminKey     string
-	DockerHost   string
-	DockerTLS    bool
-	CACert       string
-	Cert         string
-	Key          string
-	DefaultImage string
-	Poll         int
-	AuthService  string
+	Port          int
+	LogLevel      string
+	LogColors     bool
+	MongoURL      string
+	MongoDB       string
+	MongoUser     string
+	MongoPassword string
+	AdminName     string
+	AdminKey      string
+	DockerHost    string
+	DockerTLS     bool
+	CACert        string
+	Cert          string
+	Key           string
+	DefaultImage  string
+	Poll          int
+	AuthService   string
 }
 
 // NewContext loads the active configuration and applies any immediate, global settings like the

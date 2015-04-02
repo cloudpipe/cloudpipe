@@ -1,6 +1,10 @@
 package main
 
 import (
+	"crypto/tls"
+	"net"
+	"time"
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
@@ -43,7 +47,17 @@ type MongoStorage struct {
 
 // NewMongoStorage establishes a connection to the MongoDB cluster.
 func NewMongoStorage(c *Context) (*MongoStorage, error) {
-	session, err := mgo.Dial(c.Settings.MongoURL)
+	dialInfo := &mgo.DialInfo{
+		Addrs:    []string{c.Settings.MongoURL},
+		Database: c.Settings.MongoDB,
+		Username: c.Settings.MongoUser,
+		Password: c.Settings.MongoPassword,
+		DialServer: func(addr *mgo.ServerAddr) (net.Conn, error) {
+			return tls.Dial("tcp", addr.String(), &tls.Config{})
+		},
+		Timeout: time.Second * 10,
+	}
+	session, err := mgo.DialWithInfo(dialInfo)
 	if err != nil {
 		return nil, err
 	}
