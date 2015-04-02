@@ -3,6 +3,7 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2/txn"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -56,6 +57,10 @@ func (storage *MongoStorage) jobs() *mgo.Collection {
 
 func (storage *MongoStorage) accounts() *mgo.Collection {
 	return storage.Database.C("accounts")
+}
+
+func (storage *MongoStorage) txns() *mgo.Collection {
+	return storage.Database.C("txns")
 }
 
 func (storage *MongoStorage) root() *mgo.Collection {
@@ -218,14 +223,20 @@ func (storage *MongoStorage) UpdateJob(job *SubmittedJob) error {
 // GetAccount loads an account by its unique account name, creating it if it doesn't already exist.
 func (storage *MongoStorage) GetAccount(name string) (*Account, error) {
 	out := Account{Name: name}
-	_, err := storage.accounts().FindId(name).Apply(mgo.Change{
-		Update:    bson.M{"$setOnInsert": out},
-		Upsert:    true,
-		ReturnNew: true,
-	}, &out)
+
+	runner := txn.NewRunner(storage.txns())
+	ops := []txn.Op{{
+		C:      storage.accounts().Name,
+		Id:     name,
+		Assert: bson.M{"_id": bson.M{"$exists": false}},
+		Insert: out,
+	}}
+	id := bson.NewObjectId()
+	err := runner.Run(ops, id, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	return &out, nil
 }
 
