@@ -52,6 +52,10 @@
 			"Rev": "ddb122d10f547ee6cfc4ea7debff407d80abdabc"
 		},
 		{
+				"ImportPath": "github.com/cloudpipe/mgo",
+				"Rev": "4791883005793404c4d2775c85f9466e51597969"
+		},
+		{
 			"ImportPath": "gopkg.in/mgo.v2",
 			"Rev": "e2e914857713db7497cca2bd7fc0b030fc9cb22d"
 		}
