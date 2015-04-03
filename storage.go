@@ -1,8 +1,8 @@
 package main
 
 import (
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	mgo "github.com/cloudpipe/mgo"
+	"github.com/cloudpipe/mgo/bson"
 
 	log "github.com/Sirupsen/logrus"
 )
