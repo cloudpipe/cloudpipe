@@ -5,6 +5,7 @@ RUN useradd pipe && \
   chown -R pipe:pipe /go
 
 # USER pipe
+EXPOSE 8000
 
 ADD ./Godeps /go/src/github.com/cloudpipe/cloudpipe/Godeps
 WORKDIR /go/src/github.com/cloudpipe/cloudpipe/
