@@ -1,4 +1,4 @@
-Cloud Pipe
+Cloudpipe
 ==========
 
 Compute on demand in Docker containers.
