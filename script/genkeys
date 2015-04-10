@@ -13,12 +13,22 @@ KEYMASTER="docker run --volume ${ROOT}/certificates:/certificates --rm cloudpipe
 if [ ! -f "${ROOT}/certificates/password" ]; then
   echo ">> creating a random password in ${ROOT}/certificates/password."
   touch ${ROOT}/certificates/password
-  chmod 600 ${ROOT}/certificates/password
+  chmod 640 ${ROOT}/certificates/password
   # "If the same pathname argument is supplied to -passin and -passout arguments then the first
   # line will be used for the input password and the next line for the output password."
-  cat /dev/random | head -c 128 | base64 > ${ROOT}/certificates/password
+  cat /dev/urandom | head -c 128 | base64 > ${ROOT}/certificates/password
   echo "<< random password created"
 fi
+
+# Get uid
+CONTAINERUID=$(${KEYMASTER} id -u)
+
+if [[ $CONTAINERUID -ne $UID ]]; then
+    echo We need to set the uid of certificates/ from `stat -c %u certificates/` to $CONTAINERUID.
+    echo We will try doing that via sudo. Good luck!
+    sudo chown -vR $CONTAINERUID certificates/
+fi
+
 
 # Certificate authority.
 ${KEYMASTER} ca
